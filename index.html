@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Знайди Лева 🦁 + Puzzle</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --savanna: #130e05;
+    --dust: #f5e6c8;
+    --amber: #e8a020;
+    --flame: #d45a1a;
+    --ghost: rgba(245,230,200,0.06);
+    --card: rgba(30,21,8,0.85);
+    --border: rgba(232,160,32,0.22);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--savanna);
+    color: var(--dust);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+  }
+  .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.2rem; }
+  
+  /* PUZZLE STYLES */
+  .puzzle-grid {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    margin: 1rem 0 1.5rem 0;
+    display: grid;
+    gap: 2px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    perspective: 1000px;
+  }
+  .puzzle-piece {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .puzzle-piece.revealed { transform: rotateY(180deg); }
+  .piece-front, .piece-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 1px;
+  }
+  .piece-front {
+    background: linear-gradient(135deg, #1e1508 0%, #130e05 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .piece-front::after { content: '🦁'; opacity: 0.15; font-size: 1.2rem; }
+  .piece-back {
+    transform: rotateY(180deg);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-image: url('https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&q=80&w=1200');
+  }
+
+  /* EXISTING SYSTEM STYLES */
+  .project-card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 1.5rem; margin-bottom: 2rem; }
+  .project-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+  .stage-item { 
+    display: flex; align-items: center; gap: 1rem; padding: 0.8rem; 
+    background: rgba(255,255,255,0.03); margin-bottom: 0.5rem; border-radius: 12px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .stage-item:hover { background: rgba(255,255,255,0.07); }
+  .stage-item.done { opacity: 0.6; }
+  .check-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--amber); display: flex; align-items: center; justify-content: center; }
+  .stage-item.done .check-circle { background: var(--amber); }
+  .lion-badge { padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; }
+  .badge-danger { background: rgba(192,57,43,0.3); color: #ff5555; border: 1px solid #ff5555; }
+  .badge-safe { background: rgba(39,174,96,0.3); color: #5dbb7e; border: 1px solid #5dbb7e; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+// Вспомогательные функции из твоей системы
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const target = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  return Math.round((target - today) / 86400000);
+}
+
+function PuzzleGrid({ stages }) {
+  const total = stages.length;
+  if (total === 0) return null;
+
+  // Рассчитываем сетку
+  const cols = Math.ceil(Math.sqrt(total * 1.77));
+  const rows = Math.ceil(total / cols);
+
+  return (
+    <div className="puzzle-grid" style={{ 
+      gridTemplateColumns: `repeat(${cols}, 1fr)`,
+      gridTemplateRows: `repeat(${rows}, 1fr)` 
+    }}>
+      {stages.map((stage, idx) => {
+        const r = Math.floor(idx / cols);
+        const c = idx % cols;
+        const posX = cols > 1 ? (c / (cols - 1)) * 100 : 0;
+        const posY = rows > 1 ? (r / (rows - 1)) * 100 : 0;
+
+        return (
+          <div key={stage.id} className={`puzzle-piece ${stage.done ? 'revealed' : ''}`}>
+            <div className="piece-front"></div>
+            <div className="piece-back" style={{
+              backgroundPosition: `${posX}% ${posY}%`,
+              backgroundSize: `${cols * 100}% ${rows * 100}%`
+            }}></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function App() {
+  const [projects, setProjects] = useState(() => {
+    const saved = localStorage.getItem('znaydi_leva_v2');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        name: "Демо-проект: Костюм",
+        finalDate: "2026-05-20",
+        stages: [
+          { id: 101, name: "Ескіз", date: "2026-04-10", done: true },
+          { id: 102, name: "Тканина", date: "2026-04-15", done: false },
+          { id: 103, name: "Пошиття", date: "2026-05-01", done: false }
+        ]
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('znaydi_leva_v2', JSON.stringify(projects));
+  }, [projects]);
+
+  const toggleStage = (projId, stageId) => {
+    setProjects(projects.map(p => {
+      if (p.id !== projId) return p;
+      return { ...p, stages: p.stages.map(s => s.id === stageId ? { ...s, done: !s.done } : s) };
+    }));
+  };
+
+  return (
+    <div className="app">
+      <h1 style={{color: 'var(--amber)', marginBottom: '2rem', fontFamily: 'Playfair Display'}}>🦁 Знайди Лева + Пазли</h1>
+      
+      {projects.map(p => {
+        const minDays = Math.min(...p.stages.filter(s => !s.done).map(s => daysUntil(s.date) || 999));
+        const isUrgent = minDays <= 3;
+
+        return (
+          <div key={p.id} className="project-card">
+            <div className="project-header">
+              <div>
+                <h2>{p.name}</h2>
+                <p style={{fontSize: '0.8rem', opacity: 0.5}}>Дедлайн: {p.finalDate}</p>
+              </div>
+              <div className={`lion-badge ${isUrgent ? 'badge-danger' : 'badge-safe'}`}>
+                {isUrgent ? '🔥 БІЖИ!' : '🦁 Спокійний'}
+              </div>
+            </div>
+
+            {/* СЕТКА ПАЗЛА ТЕПЕРЬ ТУТ */}
+            <PuzzleGrid stages={p.stages} />
+
+            <div className="stages-list">
+              {p.stages.map(s => (
+                <div key={s.id} className={`stage-item ${s.done ? 'done' : ''}`} onClick={() => toggleStage(p.id, s.id)}>
+                  <div className="check-circle">{s.done && '✓'}</div>
+                  <div style={{flex: 1}}>
+                    <div style={{fontWeight: 700}}>{s.name}</div>
+                    <div style={{fontSize: '0.7rem', opacity: 0.5}}>{s.date}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
