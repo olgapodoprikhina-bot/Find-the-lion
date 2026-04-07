@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Знайди Лева 🦁 — Puzzle Edition</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --savanna: #130e05;
+    --dust: #f5e6c8;
+    --amber: #e8a020;
+    --flame: #d45a1a;
+    --border: rgba(232,160,32,0.22);
+    --card: rgba(30,21,8,0.85);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--savanna);
+    color: var(--dust);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+  }
+  .app { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+  
+  /* PUZZLE STYLES */
+  .puzzle-container {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    margin: 1.5rem 0;
+    display: grid;
+    gap: 2px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    perspective: 1000px;
+  }
+  .puzzle-piece {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .puzzle-piece.revealed { transform: rotateY(180deg); }
+  .piece-front, .piece-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 2px;
+  }
+  .piece-front {
+    background: linear-gradient(135deg, #2a1f0d 0%, #1a1508 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .piece-front::after { content: '🦁'; opacity: 0.2; font-size: 1.2rem; }
+  .piece-back {
+    transform: rotateY(180deg);
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--amber), var(--flame));
+    color: #000; border: none; padding: 0.8rem 1.8rem; border-radius: 50px; font-weight: 800; cursor: pointer;
+    text-transform: uppercase;
+  }
+  .project-card { background: var(--card); border: 1px solid var(--border); border-radius: 28px; padding: 1.5rem; margin-bottom: 2rem; }
+  .stage-item { 
+    display: flex; align-items: center; gap: 1rem; padding: 1rem; 
+    background: rgba(255,255,255,0.04); margin-bottom: 0.6rem; border-radius: 14px; cursor: pointer;
+  }
+  .stage-item.done { opacity: 0.5; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+const PUZZLE_IMAGES = [
+  "https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&q=80&w=1200"
+];
+
+function Puzzle({ stages, imageUrl }) {
+  const total = stages.length;
+  const cols = Math.ceil(Math.sqrt(total * 1.77));
+  const rows = Math.ceil(total / cols);
+  
+  const pieceMapping = useMemo(() => {
+    const indices = Array.from({ length: total }, (_, i) => i);
+    return indices;
+  }, [total]);
+
+  return (
+    <div className="puzzle-container" style={{ 
+      gridTemplateColumns: `repeat(${cols}, 1fr)`,
+      gridTemplateRows: `repeat(${rows}, 1fr)` 
+    }}>
+      {Array.from({ length: total }).map((_, idx) => {
+        const isRevealed = stages[idx]?.done;
+        const r = Math.floor(idx / cols);
+        const c = idx % cols;
+        const posX = cols > 1 ? (c / (cols - 1)) * 100 : 0;
+        const posY = rows > 1 ? (r / (rows - 1)) * 100 : 0;
+
+        return (
+          <div key={idx} className={`puzzle-piece ${isRevealed ? 'revealed' : ''}`}>
+            <div className="piece-front"></div>
+            <div className="piece-back" style={{
+              backgroundImage: `url(${imageUrl})`,
+              backgroundPosition: `${posX}% ${posY}%`,
+              backgroundSize: `${cols * 100}% ${rows * 100}%`
+            }}></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function App() {
+  const [projects, setProjects] = useState([{
+    id: 1,
+    name: "Мій перший Лев",
+    imageUrl: PUZZLE_IMAGES[0],
+    stages: [
+      { id: 1, text: "Почати проект", done: false },
+      { id: 2, text: "Зробити частину", done: false },
+      { id: 3, text: "Завершити", done: false }
+    ]
+  }]);
+
+  const toggleStage = (projId, stageId) => {
+    setProjects(projects.map(p => {
+      if (p.id !== projId) return p;
+      return { ...p, stages: p.stages.map(s => s.id === stageId ? { ...s, done: !s.done } : s) };
+    }));
+  };
+
+  return (
+    <div className="app">
+      <h1 style={{color: 'var(--amber)', marginBottom: '1rem'}}>🦁 Знайди Лева</h1>
+      {projects.map(p => (
+        <div key={p.id} className="project-card">
+          <h2>{p.name}</h2>
+          <Puzzle stages={p.stages} imageUrl={p.imageUrl} />
+          {p.stages.map(s => (
+            <div key={s.id} className={`stage-item ${s.done ? 'done' : ''}`} onClick={() => toggleStage(p.id, s.id)}>
+               {s.done ? '✅' : '⬜'} {s.text}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
