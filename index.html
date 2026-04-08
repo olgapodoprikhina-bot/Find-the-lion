@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Знайди Лева 🦁</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --savanna: #130e05;
+    --savanna2: #1e1508;
+    --dust: #f5e6c8;
+    --amber: #e8a020;
+    --amber-dim: rgba(232,160,32,0.18);
+    --flame: #d45a1a;
+    --mane: #8b4513;
+    --grass: #2d3a1a;
+    --sky: #1e2d3d;
+    --ghost: rgba(245,230,200,0.06);
+    --card: rgba(30,21,8,0.85);
+    --card-hover: rgba(40,30,12,0.9);
+    --border: rgba(232,160,32,0.22);
+    --border-bright: rgba(232,160,32,0.45);
+    --red: #c0392b;
+    --green: #27ae60;
+    --orange: #e67e22;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--savanna);
+    color: var(--dust);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Savanna atmosphere */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 90% 50% at 50% 110%, rgba(45,58,26,0.5) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 30% at 10% 90%, rgba(139,69,19,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 20% at 90% 85%, rgba(232,160,32,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse 100% 15% at 50% 0%, rgba(232,160,32,0.04) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* Stars */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 8% 12%, rgba(245,230,200,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 22% 6%, rgba(245,230,200,0.3) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 48% 10%, rgba(245,230,200,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 71% 4%, rgba(245,230,200,0.25) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 16%, rgba(245,230,200,0.45) 0%, transparent 100%),
+      radial-gradient(1px 1px at 38% 22%, rgba(245,230,200,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 18%, rgba(245,230,200,0.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 92% 8%, rgba(245,230,200,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 30%, rgba(245,230,200,0.15) 0%, transparent 100%),
+      radial-gradient(1px 1px at 78% 25%, rgba(245,230,200,0.2) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+    animation: twinkle 6s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle {
+    0% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+
+  #root { position: relative; z-index: 1; }
+
+  /* ── ONBOARDING ── */
+  .onboard {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+  .onboard-lion {
+    font-size: 5rem;
+    animation: breathe 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 40px rgba(232,160,32,0.6));
+    margin-bottom: 1.5rem;
+  }
+  @keyframes breathe {
+    0%,100% { transform: scale(1) rotate(-2deg); }
+    50% { transform: scale(1.1) rotate(2deg); }
+  }
+  .onboard h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 6vw, 3.8rem);
+    font-weight: 900;
+    color: var(--amber);
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 60px rgba(232,160,32,0.4), 0 2px 0 rgba(0,0,0,0.5);
+  }
+  .onboard-subtitle {
+    font-size: 0.95rem;
+    color: rgba(245,230,200,0.5);
+    margin-bottom: 2.5rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .theory-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.9rem;
+    max-width: 880px;
+    width: 100%;
+    margin-bottom: 2.5rem;
+  }
+  .theory-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.4rem 1.2rem;
+    text-align: left;
+    backdrop-filter: blur(10px);
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .theory-card:hover { border-color: var(--border-bright); transform: translateY(-2px); }
+  .theory-card .icon { font-size: 1.8rem; margin-bottom: 0.6rem; }
+  .theory-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--amber);
+    margin-bottom: 0.4rem;
+  }
+  .theory-card p { font-size: 0.85rem; line-height: 1.65; color: rgba(245,230,200,0.7); }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--amber) 0%, var(--flame) 100%);
+    color: var(--savanna);
+    border: none; border-radius: 50px;
+    padding: 0.9rem 2.5rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 24px rgba(212,90,26,0.45);
+    letter-spacing: 0.02em;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(212,90,26,0.55); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-ghost {
+    background: var(--ghost);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: rgba(245,230,200,0.7);
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-ghost:hover { background: rgba(245,230,200,0.1); color: var(--dust); }
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: rgba(245,230,200,0.6);
+    padding: 0.6rem 1.3rem;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-secondary:hover { background: rgba(245,230,200,0.06); }
+  .btn-icon {
+    background: transparent;
+    border: 1px solid rgba(212,90,26,0.3);
+    border-radius: 8px;
+    color: var(--flame);
+    width: 34px; height: 34px;
+    cursor: pointer; font-size: 1rem;
+    transition: background 0.15s, border-color 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .btn-icon:hover { background: rgba(212,90,26,0.15); border-color: var(--flame); }
+  .btn-danger {
+    background: rgba(192,57,43,0.85); border: none; border-radius: 10px;
+    color: #fff; padding: 0.6rem 1.4rem;
+    font-family: 'Nunito', sans-serif; font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-danger:hover { background: #c0392b; }
+
+  /* ── MAIN APP ── */
+  .app { max-width: 920px; margin: 0 auto; padding: 1.5rem 1.2rem 4rem; }
+  .app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 0 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .app-header-left { display: flex; align-items: center; gap: 0.8rem; }
+  .app-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.45rem; color: var(--amber); font-weight: 900;
+  }
+  .header-actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex; gap: 0.7rem;
+    margin-bottom: 1.4rem;
+    flex-wrap: wrap;
+  }
+  .stat-chip {
+    background: var(--ghost);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.8rem;
+    display: flex; align-items: center; gap: 0.4rem;
+    color: rgba(245,230,200,0.65);
+  }
+  .stat-chip strong { color: var(--amber); font-weight: 800; font-size: 1rem; }
+
+  /* ── SEARCH BAR ── */
+  .search-wrap { position: relative; margin-bottom: 1rem; }
+  .search-input {
+    width: 100%;
+    background: rgba(245,230,200,0.05);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--dust);
+    padding: 0.7rem 1rem 0.7rem 2.6rem;
+    font-size: 0.95rem;
+    font-family: 'Nunito', sans-serif;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--amber); }
+  .search-icon {
+    position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%);
+    font-size: 1rem; opacity: 0.4; pointer-events: none;
+  }
+
+  /* ── FILTER TABS ── */
+  .filter-tabs {
+    display: flex; gap: 0.4rem; margin-bottom: 1.4rem; flex-wrap: wrap;
+  }
+  .filter-tab {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: rgba(245,230,200,0.5);
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem; font-weight: 700;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 0.3rem;
+  }
+  .filter-tab:hover { border-color: var(--border-bright); color: var(--dust); }
+  .filter-tab.active {
+    background: var(--amber-dim);
+    border-color: var(--border-bright);
+    color: var(--amber);
+  }
+
+  /* ── NEW PROJECT FORM ── */
+  .new-project-card {
+    background: var(--card);
+    border: 1px solid var(--border-bright);
+    border-radius: 22px;
+    padding: 1.8rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    animation: slideDown 0.25s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .new-project-card h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--amber); margin-bottom: 1.3rem; font-size: 1.25rem;
+  }
+  .form-row { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 160px; }
+  label { font-size: 0.75rem; color: rgba(245,230,200,0.5); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 800; }
+  input[type="text"], input[type="date"], input[type="number"], textarea {
+    background: rgba(245,230,200,0.05);
+    border: 1px solid rgba(232,160,32,0.2);
+    border-radius: 10px;
+    color: var(--dust);
+    padding: 0.65rem 0.95rem;
+    font-size: 0.95rem;
+    font-family: 'Nunito', sans-serif;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    width: 100%;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus, textarea:focus {
+    border-color: var(--amber);
+    background: rgba(245,230,200,0.07);
+  }
+  input[type="date"] { color-scheme: dark; }
+  .stages-title {
+    font-size: 0.75rem; color: rgba(245,230,200,0.5);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 800;
+    margin-bottom: 0.7rem;
+  }
+  .stage-row {
+    display: flex; gap: 0.5rem; align-items: center;
+    margin-bottom: 0.5rem; flex-wrap: wrap;
+  }
+  .stage-row input[type="text"] { flex: 2; min-width: 120px; }
+  .stage-row input[type="date"] { flex: 1; min-width: 140px; }
+  .btn-add-stage {
+    background: transparent;
+    border: 1px dashed rgba(232,160,32,0.3);
+    border-radius: 10px;
+    color: rgba(232,160,32,0.55);
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer; width: 100%;
+    margin-bottom: 1rem;
+    transition: all 0.15s;
+  }
+  .btn-add-stage:hover { border-color: var(--amber); color: var(--amber); background: rgba(232,160,32,0.04); }
+  .form-actions { display: flex; gap: 0.8rem; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* ── PROJECT CARDS ── */
+  .projects-grid { display: flex; flex-direction: column; gap: 1.4rem; }
+  .project-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    transition: box-shadow 0.25s, border-color 0.25s, transform 0.2s;
+    animation: fadeInUp 0.3s ease;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .project-card:hover {
+    box-shadow: 0 10px 50px rgba(232,160,32,0.12);
+    border-color: rgba(232,160,32,0.32);
+  }
+  .project-card.collapsed .project-body { display: none; }
+  .project-header {
+    padding: 1.2rem 1.5rem;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1rem; cursor: pointer;
+    border-bottom: 1px solid rgba(232,160,32,0.08);
+    transition: background 0.15s;
+  }
+  .project-header:hover { background: rgba(245,230,200,0.02); }
+  .project-info { flex: 1; min-width: 0; }
+  .project-info h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: var(--dust); font-weight: 700;
+    margin-bottom: 0.2rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .project-meta {
+    font-size: 0.78rem; color: rgba(245,230,200,0.4);
+    display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;
+  }
+  .project-meta-tag {
+    background: rgba(245,230,200,0.05);
+    border: 1px solid rgba(245,230,200,0.1);
+    border-radius: 6px;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.72rem;
+    color: rgba(245,230,200,0.5);
+  }
+  .project-lion-zone {
+    display: flex; align-items: center; gap: 0.7rem; flex-shrink: 0;
+  }
+  .project-actions { display: flex; gap: 0.4rem; }
+  .collapse-btn {
+    background: transparent; border: none;
+    color: rgba(245,230,200,0.3); font-size: 0.8rem;
+    cursor: pointer; padding: 0.2rem 0.4rem;
+    transition: color 0.15s;
+  }
+  .collapse-btn:hover { color: rgba(245,230,200,0.7); }
+
+  /* Lion badge */
+  .lion-badge {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0.4rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.68rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    white-space: nowrap;
+    transition: all 0.3s;
+  }
+  .lion-badge .lion-emoji { font-size: 1.5rem; line-height: 1; margin-bottom: 0.12rem; }
+  .lion-safe   { background: rgba(39,174,96,0.15);  color: #5dbb7e; border: 1px solid rgba(93,187,126,0.3); }
+  .lion-watch  { background: rgba(230,126,34,0.15); color: var(--amber); border: 1px solid rgba(232,160,32,0.3); }
+  .lion-close  { background: rgba(211,84,0,0.2);   color: #ff8c42; border: 1px solid rgba(255,140,66,0.35); }
+  .lion-danger { background: rgba(192,57,43,0.25); color: #ff5555; border: 1px solid rgba(255,85,85,0.4); animation: pulse-danger 1.5s ease-in-out infinite; }
+  .lion-done   { background: rgba(232,160,32,0.12); color: var(--amber); border: 1px solid var(--border); }
+  @keyframes pulse-danger {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,85,85,0.0); }
+    50% { box-shadow: 0 0 0 6px rgba(255,85,85,0.0); border-color: rgba(255,85,85,0.7); }
+  }
+
+  /* ── PROJECT BODY ── */
+  .project-body { animation: fadeInUp 0.2s ease; }
+
+  /* Progress bar */
+  .project-progress { padding: 0.9rem 1.5rem; border-bottom: 1px solid rgba(232,160,32,0.07); }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.73rem; color: rgba(245,230,200,0.4);
+    margin-bottom: 0.45rem;
+  }
+  .progress-track {
+    height: 5px; background: rgba(245,230,200,0.07); border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--amber), var(--flame));
+    transition: width 0.5s ease;
+  }
+
+  /* Notes section */
+  .project-notes {
+    padding: 0.7rem 1.5rem;
+    border-bottom: 1px solid rgba(232,160,32,0.07);
+    font-size: 0.82rem;
+    color: rgba(245,230,200,0.5);
+    line-height: 1.55;
+    font-style: italic;
+  }
+  .project-notes-label { font-style: normal; font-weight: 800; color: rgba(245,230,200,0.3); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
+
+  /* Stages */
+  .stages-list { padding: 0.6rem 1.5rem 1.2rem; }
+  .stage-item {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.6rem 0.6rem;
+    border-bottom: 1px solid rgba(245,230,200,0.05);
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.12s;
+    position: relative;
+  }
+  .stage-item:hover { background: rgba(245,230,200,0.04); }
+  .stage-item:last-child { border-bottom: none; }
+  .stage-item.overdue:not(.done) .stage-name { color: rgba(255,85,85,0.85); }
+  .stage-check {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid rgba(232,160,32,0.3);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .stage-item.done .stage-check {
+    background: var(--amber); border-color: var(--amber);
+    animation: popCheck 0.2s ease;
+  }
+  @keyframes popCheck {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  .stage-check-inner { font-size: 0.65rem; color: var(--savanna); font-weight: 900; }
+  .stage-content { flex: 1; min-width: 0; }
+  .stage-name {
+    font-size: 0.88rem; font-weight: 600;
+    color: var(--dust);
+    transition: color 0.2s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .stage-item.done .stage-name {
+    color: rgba(245,230,200,0.35);
+    text-decoration: line-through;
+  }
+  .stage-date { font-size: 0.72rem; color: rgba(245,230,200,0.35); margin-top: 0.08rem; }
+  .stage-countdown {
+    font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.55rem;
+    border-radius: 7px; white-space: nowrap; flex-shrink: 0;
+  }
+  .countdown-safe    { background: rgba(39,174,96,0.15); color: #5dbb7e; }
+  .countdown-watch   { background: rgba(230,126,34,0.15); color: var(--amber); }
+  .countdown-close   { background: rgba(211,84,0,0.2); color: #ff8c42; }
+  .countdown-overdue { background: rgba(192,57,43,0.2); color: #ff5555; }
+  .countdown-done    { background: rgba(245,230,200,0.05); color: rgba(245,230,200,0.3); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center; padding: 4rem 1.5rem;
+    color: rgba(245,230,200,0.3);
+  }
+  .empty-state .e-lion { font-size: 4rem; margin-bottom: 1rem; opacity: 0.4; animation: breathe 4s ease-in-out infinite; }
+  .empty-state p { font-size: 0.95rem; line-height: 1.7; margin-bottom: 1.5rem; }
+
+  /* Tip bar */
+  .tip-bar {
+    background: rgba(232,160,32,0.06);
+    border: 1px solid rgba(232,160,32,0.18);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem; line-height: 1.55;
+    color: rgba(245,230,200,0.65);
+    margin-bottom: 1.3rem;
+    display: flex; gap: 0.7rem; align-items: flex-start;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .tip-bar:hover { background: rgba(232,160,32,0.1); }
+  .tip-bar .tip-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.05rem; }
+  .tip-next { font-size: 0.72rem; color: rgba(232,160,32,0.4); margin-left: auto; flex-shrink: 0; align-self: center; }
+
+  /* Delete confirm overlay */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(8,5,2,0.82);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 1.5rem;
+    backdrop-filter: blur(4px);
+    animation: fadeOverlay 0.15s ease;
+  }
+  @keyframes fadeOverlay { from { opacity: 0; } to { opacity: 1; } }
+  .overlay-card {
+    background: #1a1005;
+    border: 1px solid var(--border-bright);
+    border-radius: 22px;
+    padding: 2.2rem;
+    max-width: 380px; width: 100%;
+    text-align: center;
+    animation: popUp 0.2s ease;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  @keyframes popUp {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .overlay-card h3 {
+    font-family: 'Playfair Display', serif;
+    color: var(--amber); margin-bottom: 0.8rem; font-size: 1.2rem;
+  }
+  .overlay-card p { font-size: 0.9rem; color: rgba(245,230,200,0.65); margin-bottom: 1.6rem; line-height: 1.55; }
+  .overlay-actions { display: flex; gap: 0.8rem; justify-content: center; }
+
+  /* Edit overlay form */
+  .edit-overlay-card {
+    background: #1a1005;
+    border: 1px solid var(--border-bright);
+    border-radius: 22px;
+    padding: 2rem;
+    max-width: 560px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+    animation: popUp 0.2s ease;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .edit-overlay-card h3 {
+    font-family: 'Playfair Display', serif;
+    color: var(--amber); margin-bottom: 1.2rem; font-size: 1.2rem;
+  }
+
+  /* CONFETTI */
+  .confetti-piece {
+    position: fixed;
+    width: 9px; height: 9px;
+    border-radius: 2px;
+    animation: confettiFall 1.6s ease-out forwards;
+    pointer-events: none;
+    z-index: 300;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(-20px) rotate(0deg) scale(1); opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateY(95vh) rotate(800deg) scale(0.5); opacity: 0; }
+  }
+
+  /* Sort select */
+  .sort-select {
+    background: rgba(245,230,200,0.05);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: rgba(245,230,200,0.65);
+    padding: 0.38rem 0.7rem;
+    font-size: 0.8rem;
+    font-family: 'Nunito', sans-serif;
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* ── PUZZLE PANEL ── */
+  .project-body-main {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+  }
+  .project-body-main .stages-list {
+    flex: 1;
+    min-width: 0;
+    padding: 0.6rem 1rem 1.2rem 1.5rem;
+  }
+  .puzzle-panel {
+    width: 190px;
+    flex-shrink: 0;
+    padding: 0.8rem 1rem 1rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .puzzle-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(232,160,32,0.55);
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+  .puzzle-grid {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(232,160,32,0.15);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .puzzle-piece {
+    aspect-ratio: 1;
+    background-size: cover;
+    background-repeat: no-repeat;
+    opacity: 0.08;
+    filter: grayscale(1);
+    transition: opacity 0.45s ease, filter 0.45s ease;
+    position: relative;
+  }
+  .puzzle-piece::after {
+    content: '';
+    position: absolute; inset: 0;
+    border: 1px solid rgba(232,160,32,0.08);
+  }
+  .puzzle-piece.revealed {
+    opacity: 1;
+    filter: none;
+  }
+  .puzzle-piece.revealed::after {
+    border-color: transparent;
+  }
+  @media (max-width: 540px) {
+    .project-body-main { flex-direction: column; }
+    .puzzle-panel { width: 100%; padding: 0 1.5rem 1rem; }
+    .puzzle-grid { max-width: 220px; margin: 0 auto; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(232,160,32,0.2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(232,160,32,0.4); }
+
+  /* Responsive */
+  @media (max-width: 540px) {
+    .theory-cards { grid-template-columns: 1fr; }
+    .form-row { flex-direction: column; }
+    .project-header { gap: 0.6rem; }
+    .project-lion-zone { flex-wrap: wrap; }
+    .lion-badge { font-size: 0.6rem; }
+    .stats-bar { gap: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+const LS_KEY  = 'znaydi_leva_v2';
+const LS_SEEN = 'znaydi_leva_seen2';
+
+// ─── PERSISTENCE ──────────────────────────────────────────────
+function load() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; }
+  catch { return []; }
+}
+function save(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr); target.setHours(0,0,0,0);
+  return Math.round((target - today) / 86400000);
+}
+
+function lionLevel(days) {
+  if (days === null) return 'safe';
+  if (days < 0)  return 'danger';
+  if (days <= 2) return 'danger';
+  if (days <= 5) return 'close';
+  if (days <= 10) return 'watch';
+  return 'safe';
+}
+
+const LION_EMOJIS = { safe: '🦁', watch: '🦁', close: '😤', danger: '🔥', done: '✅' };
+const LION_LABELS = {
+  safe: 'Спокійний', watch: 'Прокидається',
+  close: 'Бачить тебе', danger: 'БІЖИ!', done: 'Приборканий'
+};
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+}
+
+function countdownLabel(days, done) {
+  if (done) return { text: 'Готово ✓', cls: 'countdown-done' };
+  if (days === null) return { text: '—', cls: 'countdown-done' };
+  if (days < 0)  return { text: `${Math.abs(days)}д прострочено`, cls: 'countdown-overdue' };
+  if (days === 0) return { text: 'СЬОГОДНІ 🔥', cls: 'countdown-overdue' };
+  if (days === 1) return { text: 'Завтра 😤', cls: 'countdown-close' };
+  if (days <= 5)  return { text: `${days}д`, cls: 'countdown-close' };
+  if (days <= 10) return { text: `${days}д`, cls: 'countdown-watch' };
+  return { text: `${days}д`, cls: 'countdown-safe' };
+}
+
+// Leaves = mini-stages if vekha has subStages, else the vekha itself
+function getLeaves(stages) {
+  const result = [];
+  for (const s of stages) {
+    if (s.subStages && s.subStages.length > 0) result.push(...s.subStages);
+    else result.push(s);
+  }
+  return result;
+}
+
+function projectLionLevel(stages) {
+  if (stages.length === 0) return 'safe';
+  const leaves = getLeaves(stages);
+  const incomplete = leaves.filter(s => !s.done);
+  if (incomplete.length === 0) return 'done';
+  const days = incomplete.map(s => daysUntil(s.date)).filter(d => d !== null);
+  if (days.length === 0) return 'safe';
+  return lionLevel(Math.min(...days));
+}
+
+function projectProgress(stages) {
+  const leaves = getLeaves(stages);
+  if (!leaves.length) return 0;
+  return Math.round(leaves.filter(l => l.done).length / leaves.length * 100);
+}
+
+function projectUrgency(p) {
+  const level = projectLionLevel(p.stages);
+  const order = { danger: 0, close: 1, watch: 2, safe: 3, done: 4 };
+  const daysLeft = p.finalDate ? daysUntil(p.finalDate) : 9999;
+  return (order[level] ?? 5) * 10000 + (daysLeft ?? 9999);
+}
+
+// ─── CONFETTI ─────────────────────────────────────────────────
+function spawnConfetti() {
+  const colors = ['#e8a020','#d45a1a','#7fc47a','#f5e6c8','#ff8c42','#ffd700','#ff6b6b'];
+  for (let i = 0; i < 40; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = (10 + Math.random() * 80) + 'vw';
+    el.style.top = '0';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDelay = (Math.random() * 0.6) + 's';
+    el.style.animationDuration = (1.2 + Math.random() * 0.8) + 's';
+    const size = 6 + Math.random() * 8;
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+  }
+}
+
+// ─── TIPS ─────────────────────────────────────────────────────
+const TIPS = [
+  '🧠 Стид — це «криптоніт продуктивності». Не гризи себе за вчора — дивись на наступного міні-лева.',
+  '⏰ Множ час на 1.5. Думаєш, займе 4 год — закладай 6. СДВГ-мозок завжди оптимістичний.',
+  '👥 Body doubling: якщо не можеш почати — подзвони подрузі або увімкни «work with me» відео.',
+  '🎯 Точка неповернення — розкрій. Він має бути готовий до середини терміну.',
+  '🔥 Відчуваєш лева? Це твій дофамін. Використай цей момент просто зараз!',
+  '📅 Запиши зовнішнє зобов\'язання: «У п\'ятницю покажу Лені». Обіцянка — живий лев.',
+  '🌙 Кращий час для початку — прямо зараз. Навіть 10 хвилин рухають лева далі.',
+  '🎵 Поставлений плейлист без слів = менше відволікань. Спробуй lo-fi або ambient.',
+  '📦 Розбивай «великий» крок на найменший можливий. «Відкрити тканину» — вже крок.',
+  '💜 Твій мозок не лінивий — він по-іншому відчуває час. Це нейробіологія, не слабкість.',
+];
+
+// ─── DEFAULT STAGES ───────────────────────────────────────────
+const DEFAULT_STAGES = [
+  { name: 'Узгодження референсу з клієнтом', subStages: [] },
+  { name: 'Виготовлення викрійки', subStages: [] },
+  { name: 'Розкрій тканини', subStages: [] },
+  { name: 'Чорнова збірка / примірка', subStages: [] },
+  { name: 'Оздоблення (декор, стрази тощо)', subStages: [] },
+  { name: 'Фото + відправка', subStages: [] },
+];
+
+// ─── ONBOARDING ───────────────────────────────────────────────
+function Onboarding({ onStart }) {
+  return (
+    <div className="onboard">
+      <div className="onboard-lion">🦁</div>
+      <h1>Знайди Лева</h1>
+      <p className="onboard-subtitle">Система планування для мозку з СДВГ</p>
+      <div className="theory-cards">
+        <div className="theory-card">
+          <div className="icon">🧠</div>
+          <h3>Тимчасова сліпота</h3>
+          <p>Твій мозок не відчуває дедлайн, поки він не «видно». За 3 тижні — лев далеко. За 18 годин — прямо перед тобою.</p>
+        </div>
+        <div className="theory-card">
+          <div className="icon">⚡</div>
+          <h3>Дофамін і адреналін</h3>
+          <p>Пік продуктивності в останній момент — це адреналін, не лінь. Але ціна — виснаження, «яма» та відраза до роботи.</p>
+        </div>
+        <div className="theory-card">
+          <div className="icon">🎯</div>
+          <h3>Мікро-лев на кожен етап</h3>
+          <p>Розбиваємо проект на етапи із власними дедлайнами. Кожен стає справжнім левом — видимим і відчутним прямо зараз.</p>
+        </div>
+        <div className="theory-card">
+          <div className="icon">🛡️</div>
+          <h3>Точка неповернення</h3>
+          <p>Є критичний момент у кожному проекті (наприклад, розкрій). Він має бути готовий до середини терміну — головний страховий дедлайн.</p>
+        </div>
+      </div>
+      <button className="btn-primary" onClick={onStart}>Знайти свого лева →</button>
+    </div>
+  );
+}
+
+// ─── NEW / EDIT PROJECT FORM ───────────────────────────────────
+function ProjectForm({ existing, onSave, onCancel, isOverlay }) {
+  const [name, setName]           = useState(existing?.name || '');
+  const [finalDate, setFinalDate] = useState(existing?.finalDate || '');
+  const [notes, setNotes]         = useState(existing?.notes || '');
+  const [image, setImage]         = useState(existing?.image || null);
+  const [stages, setStages]       = useState(
+    existing?.stages
+      ? existing.stages.map(s => ({ ...s, subStages: (s.subStages||[]).map(ss=>({...ss})) }))
+      : DEFAULT_STAGES.map((s, i) => ({ id: Date.now()+i, name: s.name, date:'', done:false, subStages:[] }))
+  );
+
+  function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setImage(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  function addStage() {
+    setStages(prev => [...prev, { id: Date.now(), name:'', date:'', done:false, subStages:[] }]);
+  }
+  function removeStage(id) { setStages(prev => prev.filter(s => s.id !== id)); }
+  function updateStage(id, field, val) {
+    setStages(prev => prev.map(s => s.id === id ? { ...s, [field]: val } : s));
+  }
+  function addSubStage(stageId) {
+    setStages(prev => prev.map(s => s.id === stageId
+      ? { ...s, subStages: [...(s.subStages||[]), { id: Date.now(), name:'', date:'', done:false }] }
+      : s));
+  }
+  function removeSubStage(stageId, subId) {
+    setStages(prev => prev.map(s => s.id === stageId
+      ? { ...s, subStages: (s.subStages||[]).filter(ss => ss.id !== subId) }
+      : s));
+  }
+  function updateSubStage(stageId, subId, field, val) {
+    setStages(prev => prev.map(s => s.id === stageId
+      ? { ...s, subStages: (s.subStages||[]).map(ss => ss.id === subId ? {...ss,[field]:val} : ss) }
+      : s));
+  }
+
+  function handleSave() {
+    if (!name.trim()) return;
+    const project = {
+      id: existing?.id || Date.now(),
+      name: name.trim(), finalDate,
+      notes: notes.trim(), image,
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      stages: stages.filter(s => s.name.trim()).map(s => ({
+        ...s, subStages: (s.subStages||[]).filter(ss => ss.name.trim())
+      }))
+    };
+    onSave(project);
+  }
+
+  const wrapClass = isOverlay ? 'edit-overlay-card' : 'new-project-card';
+
+  return (
+    <div className={wrapClass}>
+      <h3 style={isOverlay ? {} : {fontFamily:"'Playfair Display',serif", color:'var(--amber)', marginBottom:'1.3rem', fontSize:'1.25rem'}}>
+        {existing ? '✏️ Редагувати проект' : '🦁 Новий проект'}
+      </h3>
+      <div className="form-row">
+        <div className="form-group" style={{flex:2}}>
+          <label>Назва проекту</label>
+          <input type="text" placeholder="напр. Купальник для Олени"
+            value={name} onChange={e => setName(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Фінальний дедлайн</label>
+          <input type="date" value={finalDate} onChange={e => setFinalDate(e.target.value)} />
+        </div>
+      </div>
+      <div className="form-group" style={{marginBottom:'1rem'}}>
+        <label>Нотатки (необов'язково)</label>
+        <textarea placeholder="клієнт, особливі деталі, посилання..." value={notes} onChange={e => setNotes(e.target.value)} />
+      </div>
+
+      {/* ── Image for puzzle ── */}
+      <div className="form-group" style={{marginBottom:'1rem'}}>
+        <label>Зображення-пазл (необов'язково)</label>
+        <div style={{display:'flex', gap:'0.8rem', alignItems:'center', flexWrap:'wrap'}}>
+          <label className="btn-secondary" style={{cursor:'pointer', fontSize:'0.82rem', padding:'0.45rem 1rem'}}>
+            📷 Вибрати фото
+            <input type="file" accept="image/*" style={{display:'none'}} onChange={handleImageUpload} />
+          </label>
+          {image && (
+            <>
+              <img src={image} alt="preview" style={{height:48, width:48, objectFit:'cover', borderRadius:8, border:'1px solid rgba(232,160,32,0.3)'}} />
+              <button className="btn-icon" onClick={() => setImage(null)} title="Видалити фото" style={{color:'rgba(245,230,200,0.4)'}}>✕</button>
+            </>
+          )}
+          {!image && <span style={{fontSize:'0.75rem', color:'rgba(245,230,200,0.3)'}}>Розбивається на кусочки-вехи</span>}
+        </div>
+      </div>
+
+      <div className="stages-title">Вехи та міні-етапи</div>
+      {stages.map((s, i) => (
+        <div key={s.id} style={{marginBottom:'0.5rem'}}>
+          <div className="stage-row" style={{background:'rgba(232,160,32,0.06)', borderRadius:'10px', padding:'0.3rem 0.5rem', alignItems:'center'}}>
+            <span style={{fontSize:'0.8rem', color:'var(--amber)', flexShrink:0}}>🏁</span>
+            <input type="text" placeholder={`Веха ${i+1}`} value={s.name}
+              onChange={e => updateStage(s.id, 'name', e.target.value)} style={{fontWeight:700}} />
+            <input type="date" value={s.date} onChange={e => updateStage(s.id, 'date', e.target.value)} />
+            <button className="btn-icon" title="Додати міні-етап" onClick={() => addSubStage(s.id)}
+              style={{color:'rgba(232,160,32,0.7)', borderColor:'rgba(232,160,32,0.25)', fontSize:'0.75rem', padding:'0.25rem 0.5rem'}}>
+              +↳
+            </button>
+            <button className="btn-icon" onClick={() => removeStage(s.id)} title="Видалити">✕</button>
+          </div>
+          {(s.subStages||[]).map((ss, j) => (
+            <div className="stage-row" key={ss.id}
+              style={{paddingLeft:'1.6rem', background:'rgba(245,230,200,0.02)', borderRadius:'8px', marginTop:'0.22rem', alignItems:'center'}}>
+              <span style={{fontSize:'0.72rem', color:'rgba(245,230,200,0.3)', flexShrink:0}}>↳</span>
+              <input type="text" placeholder={`Міні-етап ${j+1}`} value={ss.name}
+                onChange={e => updateSubStage(s.id, ss.id, 'name', e.target.value)} />
+              <input type="date" value={ss.date} onChange={e => updateSubStage(s.id, ss.id, 'date', e.target.value)} />
+              <button className="btn-icon" onClick={() => removeSubStage(s.id, ss.id)} title="Видалити">✕</button>
+            </div>
+          ))}
+        </div>
+      ))}
+      <button className="btn-add-stage" onClick={addStage}>+ Додати Веху</button>
+
+      <div className="form-actions">
+        <button className="btn-secondary" onClick={onCancel}>Скасувати</button>
+        <button className="btn-primary" onClick={handleSave}
+          style={{padding:'0.65rem 1.6rem', fontSize:'0.95rem'}}>
+          {existing ? 'Зберегти' : 'Запустити лева'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── PUZZLE PANEL ─────────────────────────────────────────────
+function PuzzlePanel({ stages, image }) {
+  const leaves = getLeaves(stages);
+  const n = leaves.length;
+  if (n === 0 || !image) return null;
+
+  const cols = Math.max(2, Math.ceil(Math.sqrt(n)));
+  const rows = Math.ceil(n / cols);
+  const doneCount = leaves.filter(l => l.done).length;
+  const allDone = doneCount === n;
+
+  return (
+    <div className="puzzle-panel">
+      <div className="puzzle-label">
+        {allDone ? '🎉 Готово!' : `🧩 ${doneCount} / ${n}`}
+      </div>
+      <div className="puzzle-grid" style={{gridTemplateColumns: `repeat(${cols}, 1fr)`}}>
+        {leaves.map((leaf, idx) => {
+          const col = idx % cols;
+          const row = Math.floor(idx / cols);
+          const xPct = cols > 1 ? (col / (cols - 1)) * 100 : 50;
+          const yPct = rows > 1 ? (row / (rows - 1)) * 100 : 50;
+          return (
+            <div
+              key={leaf.id}
+              className={`puzzle-piece${leaf.done ? ' revealed' : ''}`}
+              title={leaf.name}
+              style={{
+                backgroundImage: `url(${image})`,
+                backgroundSize: `${cols * 100}% ${rows * 100}%`,
+                backgroundPosition: `${xPct}% ${yPct}%`,
+              }}
+            />
+          );
+        })}
+        {/* fill empty cells if n not divisible by cols */}
+        {Array.from({length: cols * rows - n}).map((_, i) => (
+          <div key={`empty-${i}`} style={{aspectRatio:'1'}} />
+        ))}
+      </div>
+      {allDone && (
+        <div style={{fontSize:'0.72rem', color:'var(--amber)', textAlign:'center', marginTop:'0.4rem', fontWeight:700}}>
+          Проект завершено ✨
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PROJECT CARD ─────────────────────────────────────────────
+function ProjectCard({ project, onToggleStage, onDelete, onEdit }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const level    = projectLionLevel(project.stages);
+  const progress = projectProgress(project.stages);
+  const daysLeft = project.finalDate ? daysUntil(project.finalDate) : null;
+
+  const levelClass = { safe:'lion-safe', watch:'lion-watch', close:'lion-close', danger:'lion-danger', done:'lion-done' }[level];
+
+  const daysLabel = daysLeft === null ? '' :
+    daysLeft < 0  ? `${Math.abs(daysLeft)}д прострочено` :
+    daysLeft === 0 ? 'Сьогодні!' :
+    `${daysLeft}д до здачі`;
+
+  const daysColor = daysLeft !== null && daysLeft <= 3 ? '#ff5555' :
+    daysLeft !== null && daysLeft <= 7 ? '#ff8c42' : 'rgba(245,230,200,0.4)';
+
+  return (
+    <div className={`project-card${collapsed ? ' collapsed' : ''}`}>
+      <div className="project-header" onClick={() => setCollapsed(c => !c)}>
+        <div className="project-info">
+          <h2>{project.name}</h2>
+          <div className="project-meta">
+            {project.finalDate && (
+              <span style={{color: daysColor}}>
+                📅 {formatDate(project.finalDate)}{daysLabel ? ` · ${daysLabel}` : ''}
+              </span>
+            )}
+            {project.stages.length > 0 && (
+              <span className="project-meta-tag">
+                {getLeaves(project.stages).filter(l=>l.done).length}/{getLeaves(project.stages).length} кроків
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="project-lion-zone">
+          <div className={`lion-badge ${levelClass}`}>
+            <span className="lion-emoji">{LION_EMOJIS[level]}</span>
+            {LION_LABELS[level]}
+          </div>
+          <div className="project-actions" onClick={e => e.stopPropagation()}>
+            <button className="btn-icon" onClick={() => onEdit(project)}
+              title="Редагувати" style={{color:'rgba(232,160,32,0.5)', borderColor:'rgba(232,160,32,0.2)'}}>✏️</button>
+            <button className="btn-icon" onClick={() => onDelete(project.id)}
+              title="Видалити" style={{color:'rgba(245,230,200,0.25)', borderColor:'rgba(245,230,200,0.1)'}}>🗑</button>
+          </div>
+          <span style={{fontSize:'0.8rem', color:'rgba(245,230,200,0.3)', userSelect:'none'}}>
+            {collapsed ? '▶' : '▼'}
+          </span>
+        </div>
+      </div>
+
+      <div className="project-body">
+        {project.stages.length > 0 && (
+          <div className="project-progress">
+            <div className="progress-label">
+              <span>Прогрес</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="progress-track">
+              <div className="progress-fill" style={{width: progress + '%'}} />
+            </div>
+          </div>
+        )}
+
+        {project.notes && (
+          <div className="project-notes">
+            <div className="project-notes-label">Нотатки</div>
+            {project.notes}
+          </div>
+        )}
+
+        <div className="project-body-main">
+          <div className="stages-list">
+            {project.stages.map(stage => {
+              const hasSub = stage.subStages && stage.subStages.length > 0;
+              const stageDone = hasSub ? (stage.subStages||[]).every(ss => ss.done) : stage.done;
+              const days = stageDone ? null : daysUntil(stage.date);
+              const cd = countdownLabel(days, stageDone);
+              const isOverdue = !stageDone && days !== null && days < 0;
+              const subDone = hasSub ? (stage.subStages||[]).filter(ss=>ss.done).length : 0;
+              const subTotal = hasSub ? (stage.subStages||[]).length : 0;
+              return (
+                <div key={stage.id}>
+                  <div
+                    className={`stage-item${stageDone ? ' done' : ''}${isOverdue ? ' overdue' : ''}`}
+                    onClick={() => !hasSub && onToggleStage(project.id, stage.id)}
+                    style={hasSub ? {cursor:'default', background:'rgba(232,160,32,0.04)', borderRadius:'10px'} : {}}
+                  >
+                    {hasSub
+                      ? <span style={{fontSize:'0.85rem', flexShrink:0}}>🏁</span>
+                      : <div className="stage-check">{stage.done && <span className="stage-check-inner">✓</span>}</div>
+                    }
+                    <div className="stage-content">
+                      <div className="stage-name" style={hasSub ? {fontWeight:700, color:'var(--amber)'} : {}}>
+                        {stage.name}
+                      </div>
+                      {stage.date && <div className="stage-date">{formatDate(stage.date)}</div>}
+                    </div>
+                    {hasSub
+                      ? <span style={{fontSize:'0.72rem', color:'rgba(245,230,200,0.4)', flexShrink:0}}>{subDone}/{subTotal}</span>
+                      : stage.date && <span className={`stage-countdown ${cd.cls}`}>{cd.text}</span>
+                    }
+                  </div>
+                  {hasSub && (stage.subStages||[]).map(ss => {
+                    const ssDays = ss.done ? null : daysUntil(ss.date);
+                    const ssCd = countdownLabel(ssDays, ss.done);
+                    const ssOverdue = !ss.done && ssDays !== null && ssDays < 0;
+                    return (
+                      <div key={ss.id}
+                        className={`stage-item${ss.done ? ' done' : ''}${ssOverdue ? ' overdue' : ''}`}
+                        onClick={() => onToggleStage(project.id, stage.id, ss.id)}
+                        style={{paddingLeft:'2rem'}}
+                      >
+                        <div className="stage-check">{ss.done && <span className="stage-check-inner">✓</span>}</div>
+                        <div className="stage-content">
+                          <div className="stage-name" style={{fontSize:'0.83rem'}}>{ss.name}</div>
+                          {ss.date && <div className="stage-date">{formatDate(ss.date)}</div>}
+                        </div>
+                        {ss.date && <span className={`stage-countdown ${ssCd.cls}`}>{ssCd.text}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+            {project.stages.length === 0 && (
+              <div style={{fontSize:'0.82rem', color:'rgba(245,230,200,0.25)', padding:'0.5rem 0'}}>Немає етапів</div>
+            )}
+          </div>
+          <PuzzlePanel stages={project.stages} image={project.image} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DELETE CONFIRM ───────────────────────────────────────────
+function DeleteConfirm({ name, onConfirm, onCancel }) {
+  return (
+    <div className="overlay">
+      <div className="overlay-card">
+        <h3>Відпустити лева? 🦁</h3>
+        <p>Видалити проект <strong style={{color:'var(--amber)'}}>{name}</strong>?<br/>Це незворотно.</p>
+        <div className="overlay-actions">
+          <button className="btn-secondary" onClick={onCancel}>Залишити</button>
+          <button className="btn-danger" onClick={onConfirm}>Видалити</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── EDIT OVERLAY ────────────────────────────────────────────
+function EditOverlay({ project, onSave, onCancel }) {
+  return (
+    <div className="overlay">
+      <ProjectForm existing={project} onSave={onSave} onCancel={onCancel} isOverlay />
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────
+function App() {
+  const [seen, setSeen]           = useState(() => !!localStorage.getItem(LS_SEEN));
+  const [projects, setProjects]   = useState(load);
+  const [showForm, setShowForm]   = useState(false);
+  const [deleteId, setDeleteId]   = useState(null);
+  const [editProject, setEditProject] = useState(null);
+  const [search, setSearch]       = useState('');
+  const [filter, setFilter]       = useState('all');
+  const [sort, setSort]           = useState('urgency');
+  const [tipIdx, setTipIdx]       = useState(() => new Date().getDate() % TIPS.length);
+
+  function handleStart() {
+    localStorage.setItem(LS_SEEN, '1');
+    setSeen(true);
+  }
+
+  function handleSave(project) {
+    const updated = [project, ...projects.filter(p => p.id !== project.id)];
+    setProjects(updated); save(updated);
+    setShowForm(false);
+    setEditProject(null);
+  }
+
+  function handleToggleStage(projectId, stageId, subStageId) {
+    const updated = projects.map(p => {
+      if (p.id !== projectId) return p;
+      const stages = p.stages.map(s => {
+        if (s.id !== stageId) return s;
+        if (subStageId) {
+          const subStages = (s.subStages||[]).map(ss =>
+            ss.id === subStageId ? { ...ss, done: !ss.done } : ss
+          );
+          return { ...s, subStages, done: subStages.every(ss => ss.done) };
+        }
+        return { ...s, done: !s.done };
+      });
+      const wasAllDone = getLeaves(p.stages).every(l => l.done);
+      const isAllDone  = getLeaves(stages).every(l => l.done);
+      if (!wasAllDone && isAllDone && stages.length > 0) spawnConfetti();
+      return { ...p, stages };
+    });
+    setProjects(updated); save(updated);
+  }
+
+  function handleDelete(id) { setDeleteId(id); }
+  function confirmDelete() {
+    const updated = projects.filter(p => p.id !== deleteId);
+    setProjects(updated); save(updated); setDeleteId(null);
+  }
+
+  function handleEdit(project) { setEditProject(project); }
+
+  // ── Stats
+  const totalProjects  = projects.length;
+  const doneProjects   = projects.filter(p => projectLionLevel(p.stages) === 'done').length;
+  const dangerProjects = projects.filter(p => projectLionLevel(p.stages) === 'danger').length;
+  const totalStages    = projects.reduce((acc, p) => acc + getLeaves(p.stages).length, 0);
+  const doneStages     = projects.reduce((acc, p) => acc + getLeaves(p.stages).filter(l=>l.done).length, 0);
+
+  // ── Filter + search + sort
+  let displayed = projects;
+
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    displayed = displayed.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.notes || '').toLowerCase().includes(q) ||
+      p.stages.some(s => s.name.toLowerCase().includes(q) ||
+        (s.subStages||[]).some(ss => ss.name.toLowerCase().includes(q)))
+    );
+  }
+
+  if (filter === 'active')  displayed = displayed.filter(p => projectLionLevel(p.stages) !== 'done');
+  if (filter === 'done')    displayed = displayed.filter(p => projectLionLevel(p.stages) === 'done');
+  if (filter === 'danger')  displayed = displayed.filter(p => ['danger','close'].includes(projectLionLevel(p.stages)));
+
+  if (sort === 'urgency')  displayed = [...displayed].sort((a,b) => projectUrgency(a) - projectUrgency(b));
+  if (sort === 'newest')   displayed = [...displayed].sort((a,b) => b.id - a.id);
+  if (sort === 'name')     displayed = [...displayed].sort((a,b) => a.name.localeCompare(b.name, 'uk'));
+  if (sort === 'progress') displayed = [...displayed].sort((a,b) => projectProgress(b.stages) - projectProgress(a.stages));
+
+  const projectToDelete = projects.find(p => p.id === deleteId);
+
+  if (!seen) return <Onboarding onStart={handleStart} />;
+
+  return (
+    <div className="app">
+      {/* Header */}
+      <div className="app-header">
+        <div className="app-header-left">
+          <h1>🦁 Знайди Лева</h1>
+        </div>
+        <div className="header-actions">
+          <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
+            <option value="urgency">За терміновістю</option>
+            <option value="newest">За датою додавання</option>
+            <option value="name">За назвою</option>
+            <option value="progress">За прогресом</option>
+          </select>
+          <button className="btn-ghost" onClick={() => { localStorage.removeItem(LS_SEEN); setSeen(false); }}>
+            Як це працює?
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      {projects.length > 0 && (
+        <div className="stats-bar">
+          <div className="stat-chip">🦁 Проектів: <strong>{totalProjects}</strong></div>
+          <div className="stat-chip">✅ Завершено: <strong>{doneProjects}</strong></div>
+          {dangerProjects > 0 && <div className="stat-chip" style={{borderColor:'rgba(255,85,85,0.3)', color:'#ff5555'}}>🔥 Горить: <strong>{dangerProjects}</strong></div>}
+          {totalStages > 0 && <div className="stat-chip">📋 Етапів: <strong>{doneStages}/{totalStages}</strong></div>}
+        </div>
+      )}
+
+      {/* Tip bar */}
+      <div className="tip-bar" onClick={() => setTipIdx(i => (i+1) % TIPS.length)} title="Натисни для наступної підказки">
+        <span className="tip-icon">💡</span>
+        <span>{TIPS[tipIdx]}</span>
+        <span className="tip-next">→</span>
+      </div>
+
+      {/* Add project */}
+      {!showForm && (
+        <button className="btn-primary" onClick={() => setShowForm(true)}
+          style={{width:'100%', marginBottom:'1.2rem', borderRadius:'14px', fontSize:'1rem'}}>
+          + Новий проект
+        </button>
+      )}
+
+      {showForm && (
+        <ProjectForm onSave={handleSave} onCancel={() => setShowForm(false)} />
+      )}
+
+      {/* Search + filter */}
+      {projects.length > 0 && (
+        <>
+          <div className="search-wrap">
+            <span className="search-icon">🔍</span>
+            <input className="search-input" placeholder="Пошук проектів та етапів..."
+              value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="filter-tabs">
+            {[
+              { key:'all',    label:'Всі' },
+              { key:'active', label:'Активні' },
+              { key:'danger', label:'🔥 Горять' },
+              { key:'done',   label:'✅ Готові' },
+            ].map(f => (
+              <button key={f.key}
+                className={`filter-tab${filter===f.key?' active':''}`}
+                onClick={() => setFilter(f.key)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Empty state */}
+      {projects.length === 0 && !showForm && (
+        <div className="empty-state">
+          <div className="e-lion">🦁</div>
+          <p>Левів ще немає.<br />Додай перший проект — і знайди свого лева.</p>
+        </div>
+      )}
+
+      {projects.length > 0 && displayed.length === 0 && (
+        <div className="empty-state">
+          <div className="e-lion" style={{fontSize:'2.5rem'}}>🔍</div>
+          <p>Нічого не знайдено.<br />Спробуй інший пошук або фільтр.</p>
+        </div>
+      )}
+
+      {/* Projects */}
+      <div className="projects-grid">
+        {displayed.map(p => (
+          <ProjectCard
+            key={p.id}
+            project={p}
+            onToggleStage={handleToggleStage}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+          />
+        ))}
+      </div>
+
+      {/* Delete modal */}
+      {deleteId && projectToDelete && (
+        <DeleteConfirm
+          name={projectToDelete.name}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteId(null)}
+        />
+      )}
+
+      {/* Edit modal */}
+      {editProject && (
+        <EditOverlay
+          project={editProject}
+          onSave={handleSave}
+          onCancel={() => setEditProject(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
