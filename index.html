@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Знайди Лева 🦁</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --savanna:#130e05;--dust:#f5e6c8;
+  --amber:#e8a020;--amber-dim:rgba(232,160,32,.18);--flame:#d45a1a;
+  --ghost:rgba(245,230,200,.06);--card:rgba(30,21,8,.85);
+  --border:rgba(232,160,32,.22);--border-bright:rgba(232,160,32,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--savanna);color:var(--dust);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse 90% 50% at 50% 110%,rgba(45,58,26,.5) 0%,transparent 70%),
+  radial-gradient(ellipse 60% 30% at 10% 90%,rgba(139,69,19,.12) 0%,transparent 60%);
+  pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background-image:
+  radial-gradient(1px 1px at 8% 12%,rgba(245,230,200,.5) 0%,transparent 100%),
+  radial-gradient(1.5px 1.5px at 48% 10%,rgba(245,230,200,.6) 0%,transparent 100%),
+  radial-gradient(1px 1px at 85% 16%,rgba(245,230,200,.45) 0%,transparent 100%),
+  radial-gradient(1px 1px at 22% 6%,rgba(245,230,200,.3) 0%,transparent 100%),
+  radial-gradient(1px 1px at 60% 18%,rgba(245,230,200,.35) 0%,transparent 100%);
+  pointer-events:none;z-index:0;animation:twinkle 6s ease-in-out infinite alternate}
+@keyframes twinkle{0%{opacity:.7}100%{opacity:1}}
+#root{position:relative;z-index:1}
+
+.onboard{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;text-align:center}
+.onboard-lion{font-size:5rem;animation:breathe 3s ease-in-out infinite;filter:drop-shadow(0 0 40px rgba(232,160,32,.6));margin-bottom:1.5rem}
+@keyframes breathe{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.1) rotate(2deg)}}
+.onboard h1{font-family:'Playfair Display',serif;font-size:clamp(2.4rem,6vw,3.8rem);font-weight:900;color:var(--amber);line-height:1.1;margin-bottom:.5rem}
+.onboard-subtitle{font-size:.95rem;color:rgba(245,230,200,.5);margin-bottom:2.5rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+.theory-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.9rem;max-width:880px;width:100%;margin-bottom:2.5rem}
+.theory-card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:18px;padding:1.4rem 1.2rem;text-align:left;backdrop-filter:blur(10px);transition:border-color .2s,transform .2s}
+.theory-card:hover{border-color:var(--border-bright);transform:translateY(-2px)}
+.theory-card .icon{font-size:1.8rem;margin-bottom:.6rem}
+.theory-card h3{font-family:'Playfair Display',serif;font-size:1rem;color:var(--amber);margin-bottom:.4rem}
+.theory-card p{font-size:.85rem;line-height:1.65;color:rgba(245,230,200,.7)}
+
+.btn-primary{background:linear-gradient(135deg,var(--amber),var(--flame));color:var(--savanna);border:none;border-radius:50px;padding:.9rem 2.5rem;font-size:1.05rem;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 24px rgba(212,90,26,.45)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(212,90,26,.55)}
+.btn-primary:active{transform:translateY(0)}
+.btn-ghost{background:var(--ghost);border:1px solid var(--border);border-radius:10px;color:rgba(245,230,200,.7);padding:.5rem 1rem;font-size:.85rem;font-family:'Nunito',sans-serif;cursor:pointer;transition:background .15s}
+.btn-ghost:hover{background:rgba(245,230,200,.1)}
+.btn-secondary{background:transparent;border:1px solid var(--border);border-radius:10px;color:rgba(245,230,200,.6);padding:.6rem 1.3rem;font-family:'Nunito',sans-serif;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-secondary:hover{background:rgba(245,230,200,.06)}
+.btn-icon{background:transparent;border:1px solid rgba(212,90,26,.3);border-radius:8px;color:var(--flame);width:34px;height:34px;cursor:pointer;font-size:1rem;transition:background .15s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn-icon:hover{background:rgba(212,90,26,.15)}
+.btn-danger{background:rgba(192,57,43,.85);border:none;border-radius:10px;color:#fff;padding:.6rem 1.4rem;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-danger:hover{background:#c0392b}
+
+.app{max-width:1020px;margin:0 auto;padding:1.5rem 1.2rem 4rem}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 0 1.5rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap}
+.app-header h1{font-family:'Playfair Display',serif;font-size:1.45rem;color:var(--amber);font-weight:900}
+.header-actions{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.stats-bar{display:flex;gap:.7rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.stat-chip{background:var(--ghost);border:1px solid var(--border);border-radius:10px;padding:.5rem .9rem;font-size:.8rem;display:flex;align-items:center;gap:.4rem;color:rgba(245,230,200,.65)}
+.stat-chip strong{color:var(--amber);font-weight:800;font-size:1rem}
+.search-wrap{position:relative;margin-bottom:1rem}
+.search-input{width:100%;background:rgba(245,230,200,.05);border:1px solid var(--border);border-radius:12px;color:var(--dust);padding:.7rem 1rem .7rem 2.6rem;font-size:.95rem;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--amber)}
+.search-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);font-size:1rem;opacity:.4;pointer-events:none}
+.filter-tabs{display:flex;gap:.4rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.filter-tab{background:transparent;border:1px solid var(--border);border-radius:8px;color:rgba(245,230,200,.5);padding:.35rem .85rem;font-size:.8rem;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;transition:all .15s}
+.filter-tab:hover{border-color:var(--border-bright);color:var(--dust)}
+.filter-tab.active{background:var(--amber-dim);border-color:var(--border-bright);color:var(--amber)}
+.sort-select{background:rgba(245,230,200,.05);border:1px solid var(--border);border-radius:9px;color:rgba(245,230,200,.65);padding:.38rem .7rem;font-size:.8rem;font-family:'Nunito',sans-serif;outline:none;cursor:pointer}
+.tip-bar{background:rgba(232,160,32,.06);border:1px solid rgba(232,160,32,.18);border-radius:12px;padding:.75rem 1rem;font-size:.82rem;line-height:1.55;color:rgba(245,230,200,.65);margin-bottom:1.3rem;display:flex;gap:.7rem;align-items:flex-start;cursor:pointer;transition:background .2s}
+.tip-bar:hover{background:rgba(232,160,32,.1)}
+.tip-next{font-size:.72rem;color:rgba(232,160,32,.4);margin-left:auto;flex-shrink:0;align-self:center}
+
+/* FORM */
+.new-project-card{background:var(--card);border:1px solid var(--border-bright);border-radius:22px;padding:1.8rem;margin-bottom:2rem;backdrop-filter:blur(12px);box-shadow:0 8px 40px rgba(0,0,0,.4);animation:slideDown .25s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+.new-project-card h2,.edit-overlay-card h2{font-family:'Playfair Display',serif;color:var(--amber);margin-bottom:1.3rem;font-size:1.25rem}
+.form-row{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1rem}
+.form-group{display:flex;flex-direction:column;gap:.35rem;flex:1;min-width:160px}
+label{font-size:.75rem;color:rgba(245,230,200,.5);text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+input[type="text"],input[type="date"],input[type="number"],textarea{background:rgba(245,230,200,.05);border:1px solid rgba(232,160,32,.2);border-radius:10px;color:var(--dust);padding:.65rem .95rem;font-size:.95rem;font-family:'Nunito',sans-serif;outline:none;transition:border-color .2s;width:100%}
+input[type="number"]{-moz-appearance:textfield}
+input[type="number"]::-webkit-inner-spin-button{opacity:.5}
+textarea{resize:vertical;min-height:70px}
+input:focus,textarea:focus{border-color:var(--amber)}
+input[type="date"]{color-scheme:dark}
+.btn-add-stage{background:transparent;border:1px dashed rgba(232,160,32,.3);border-radius:10px;color:rgba(232,160,32,.55);padding:.5rem 1rem;font-size:.85rem;font-family:'Nunito',sans-serif;cursor:pointer;width:100%;margin-bottom:1rem;transition:all .15s}
+.btn-add-stage:hover{border-color:var(--amber);color:var(--amber)}
+.form-actions{display:flex;gap:.8rem;justify-content:flex-end;flex-wrap:wrap}
+.stages-title{font-size:.75rem;color:rgba(245,230,200,.5);text-transform:uppercase;letter-spacing:.06em;font-weight:800;margin-bottom:.7rem}
+.stage-row{display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;flex-wrap:nowrap}
+
+/* TIME */
+.time-inp{width:66px!important;min-width:0!important;padding:.5rem .4rem!important;text-align:center;font-size:.85rem!important}
+.time-col{display:flex;flex-direction:column;gap:1px;align-items:center;flex-shrink:0}
+.time-lbl{font-size:.56rem;color:rgba(245,230,200,.3);text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+.time-real-lbl{font-size:.6rem;color:rgba(232,160,32,.6);font-weight:800}
+
+/* DAY WARNINGS IN FORM */
+.day-warnings{margin:.2rem 0 .8rem;display:flex;flex-direction:column;gap:.4rem}
+.day-warn{background:rgba(192,57,43,.13);border:1px solid rgba(192,57,43,.38);border-radius:10px;padding:.5rem .85rem;font-size:.79rem;color:#ff8a80;display:flex;align-items:flex-start;gap:.45rem;line-height:1.45}
+
+/* PROJECTS */
+.projects-grid{display:flex;flex-direction:column;gap:1.4rem}
+.project-card{background:var(--card);border:1px solid var(--border);border-radius:22px;overflow:hidden;backdrop-filter:blur(8px);transition:box-shadow .25s,border-color .25s;animation:fadeInUp .3s ease;position:relative}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.project-card:hover{box-shadow:0 10px 50px rgba(232,160,32,.12);border-color:rgba(232,160,32,.32)}
+.project-card.collapsed .project-body{display:none}
+.project-card.dragging{opacity:.4;border:2px dashed var(--amber)!important;transform:scale(.99)}
+.project-card.drag-over{border:2px dashed rgba(232,160,32,.8)!important;box-shadow:0 0 0 3px rgba(232,160,32,.12)}
+
+.drag-handle{cursor:grab;color:rgba(245,230,200,.2);font-size:1.1rem;padding:0 .15rem;flex-shrink:0;user-select:none;transition:color .15s;line-height:1;margin-top:.15rem}
+.drag-handle:hover{color:rgba(245,230,200,.5)}
+.drag-handle:active{cursor:grabbing}
+.stage-drag-handle{cursor:grab;color:rgba(245,230,200,.15);font-size:.9rem;flex-shrink:0;user-select:none;transition:color .15s;padding:0 .05rem}
+.stage-drag-handle:hover{color:rgba(245,230,200,.45)}
+.stage-drag-handle:active{cursor:grabbing}
+
+.project-header{padding:1.1rem 1.4rem 1.1rem 1rem;display:flex;align-items:flex-start;justify-content:space-between;gap:.7rem;border-bottom:1px solid rgba(232,160,32,.08);transition:background .15s}
+.project-header-click{flex:1;min-width:0;cursor:pointer;display:flex;flex-direction:column;gap:.15rem}
+.project-header-click:hover h2{color:var(--amber)}
+.project-info h2{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--dust);font-weight:700;transition:color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.project-meta{font-size:.77rem;color:rgba(245,230,200,.4);display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.project-meta-tag{background:rgba(245,230,200,.05);border:1px solid rgba(245,230,200,.1);border-radius:6px;padding:.1rem .5rem;font-size:.71rem;color:rgba(245,230,200,.5)}
+.project-lion-zone{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
+.project-actions{display:flex;gap:.35rem}
+.lion-badge{display:flex;flex-direction:column;align-items:center;padding:.4rem .7rem;border-radius:12px;font-size:.67rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;transition:all .3s}
+.lion-badge .lion-emoji{font-size:1.45rem;line-height:1;margin-bottom:.1rem}
+.lion-safe  {background:rgba(39,174,96,.15); color:#5dbb7e;border:1px solid rgba(93,187,126,.3)}
+.lion-watch {background:rgba(230,126,34,.15);color:var(--amber);border:1px solid rgba(232,160,32,.3)}
+.lion-close {background:rgba(211,84,0,.2);   color:#ff8c42;border:1px solid rgba(255,140,66,.35)}
+.lion-danger{background:rgba(192,57,43,.25); color:#ff5555;border:1px solid rgba(255,85,85,.4);animation:pdanger 1.5s ease-in-out infinite}
+.lion-done  {background:rgba(232,160,32,.12);color:var(--amber);border:1px solid var(--border)}
+@keyframes pdanger{0%,100%{border-color:rgba(255,85,85,.4)}50%{border-color:rgba(255,85,85,.85)}}
+
+.project-body{animation:fadeInUp .2s ease}
+.project-body-inner{display:grid;grid-template-columns:1fr auto;align-items:start}
+.stages-col{min-width:0}
+.project-progress{padding:.85rem 1.4rem;border-bottom:1px solid rgba(232,160,32,.07)}
+.progress-label{display:flex;justify-content:space-between;font-size:.72rem;color:rgba(245,230,200,.4);margin-bottom:.4rem}
+.progress-track{height:5px;background:rgba(245,230,200,.07);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--amber),var(--flame));transition:width .5s ease}
+.project-notes{padding:.65rem 1.4rem;border-bottom:1px solid rgba(232,160,32,.07);font-size:.81rem;color:rgba(245,230,200,.5);line-height:1.55;font-style:italic}
+.project-notes-label{font-style:normal;font-weight:800;color:rgba(245,230,200,.3);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.2rem}
+
+/* CARD WARNINGS */
+.card-warnings{padding:.5rem 1.4rem;border-bottom:1px solid rgba(192,57,43,.15)}
+.card-warn-item{background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.32);border-radius:9px;padding:.42rem .75rem;font-size:.75rem;color:#ff8a80;margin-bottom:.3rem;line-height:1.4;display:flex;align-items:flex-start;gap:.4rem}
+.card-warn-item:last-child{margin-bottom:0}
+
+/* STAGES */
+.stages-list{padding:.55rem 1.4rem 1.1rem}
+.stage-item{display:flex;align-items:center;gap:.7rem;padding:.52rem .5rem;border-bottom:1px solid rgba(245,230,200,.05);border-radius:10px;transition:background .12s;position:relative}
+.stage-item:hover{background:rgba(245,230,200,.04)}
+.stage-item:last-child{border-bottom:none}
+.stage-item.overdue:not(.done) .stage-name{color:rgba(255,85,85,.85)}
+.stage-item.stage-drag-over{border-top:2px solid rgba(232,160,32,.55)}
+.stage-check{width:22px;height:22px;border-radius:50%;border:2px solid rgba(232,160,32,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;cursor:pointer}
+.stage-item.done .stage-check{background:var(--amber);border-color:var(--amber);animation:popCheck .2s ease}
+@keyframes popCheck{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+.stage-check-inner{font-size:.65rem;color:var(--savanna);font-weight:900}
+.stage-content{flex:1;min-width:0}
+.stage-name{font-size:.87rem;font-weight:600;color:var(--dust);transition:color .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage-item.done .stage-name{color:rgba(245,230,200,.35);text-decoration:line-through}
+.stage-meta{font-size:.68rem;color:rgba(245,230,200,.32);margin-top:.06rem;display:flex;gap:.45rem;flex-wrap:wrap;align-items:center}
+.tbadge{font-size:.66rem;font-weight:800;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
+.tbadge-est{background:rgba(232,160,32,.1);color:rgba(232,160,32,.75);border:1px solid rgba(232,160,32,.2)}
+.tbadge-real{background:rgba(211,84,0,.15);color:#ff8c42;border:1px solid rgba(255,140,66,.22)}
+.stage-countdown{font-size:.69rem;font-weight:800;padding:.18rem .5rem;border-radius:7px;white-space:nowrap;flex-shrink:0}
+.countdown-safe   {background:rgba(39,174,96,.15); color:#5dbb7e}
+.countdown-watch  {background:rgba(230,126,34,.15);color:var(--amber)}
+.countdown-close  {background:rgba(211,84,0,.2);   color:#ff8c42}
+.countdown-overdue{background:rgba(192,57,43,.2);  color:#ff5555}
+.countdown-done   {background:rgba(245,230,200,.05);color:rgba(245,230,200,.3)}
+
+/* PUZZLE */
+.puzzle-panel{padding:.85rem .75rem .85rem 0;display:flex;flex-direction:column;align-items:center;gap:.45rem;min-width:198px}
+.puzzle-label{font-size:.66rem;color:rgba(245,230,200,.32);text-transform:uppercase;letter-spacing:.07em;font-weight:800;text-align:center}
+.puzzle-count{font-size:.72rem;color:rgba(232,160,32,.7);font-weight:800;text-align:center}
+.puzzle-done-msg{font-size:.78rem;color:var(--amber);font-weight:800;text-align:center;animation:glowp 1.5s ease-in-out infinite}
+@keyframes glowp{0%,100%{text-shadow:0 0 6px rgba(232,160,32,.3)}50%{text-shadow:0 0 18px rgba(232,160,32,.9)}}
+.puzzle-empty{font-size:.8rem;color:rgba(245,230,200,.22);text-align:center;padding:1rem .5rem;line-height:1.6;width:190px}
+.piece-ov{transition:opacity .75s cubic-bezier(.4,0,.2,1)}
+.puzzle-gen-msg{font-size:.65rem;color:rgba(232,160,32,.55);text-align:center;font-style:italic;animation:genPulse 1.8s ease-in-out infinite;margin-top:.2rem}
+@keyframes genPulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+/* MODALS */
+.empty-state{text-align:center;padding:4rem 1.5rem;color:rgba(245,230,200,.3)}
+.empty-state .e-lion{font-size:4rem;margin-bottom:1rem;opacity:.4;animation:breathe 4s ease-in-out infinite}
+.empty-state p{font-size:.95rem;line-height:1.7;margin-bottom:1.5rem}
+.overlay{position:fixed;inset:0;background:rgba(8,5,2,.82);display:flex;align-items:center;justify-content:center;z-index:100;padding:1.5rem;backdrop-filter:blur(4px);animation:fadeOv .15s ease}
+@keyframes fadeOv{from{opacity:0}to{opacity:1}}
+.overlay-card{background:#1a1005;border:1px solid var(--border-bright);border-radius:22px;padding:2.2rem;max-width:380px;width:100%;text-align:center;animation:popUp .2s ease;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+@keyframes popUp{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.overlay-card h3{font-family:'Playfair Display',serif;color:var(--amber);margin-bottom:.8rem;font-size:1.2rem}
+.overlay-card p{font-size:.9rem;color:rgba(245,230,200,.65);margin-bottom:1.6rem;line-height:1.55}
+.overlay-actions{display:flex;gap:.8rem;justify-content:center}
+.edit-overlay{position:fixed;inset:0;background:rgba(8,5,2,.82);display:flex;align-items:flex-start;justify-content:center;z-index:100;padding:1.5rem;backdrop-filter:blur(4px);overflow-y:auto;animation:fadeOv .15s ease}
+.edit-overlay-card{background:#1a1005;border:1px solid var(--border-bright);border-radius:22px;padding:1.8rem;max-width:920px;width:100%;margin:auto;animation:popUp .2s ease;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.form-stages-puzzle{display:grid;grid-template-columns:1fr 210px;gap:1.2rem;align-items:start}
+.form-puzzle-col{position:sticky;top:1.5rem;display:flex;flex-direction:column;align-items:center;gap:.6rem}
+.confetti-piece{position:fixed;width:9px;height:9px;border-radius:2px;animation:cfetti 1.6s ease-out forwards;pointer-events:none;z-index:300}
+@keyframes cfetti{0%{transform:translateY(-20px) rotate(0deg) scale(1);opacity:1}80%{opacity:1}100%{transform:translateY(95vh) rotate(800deg) scale(.5);opacity:0}}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(232,160,32,.2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(232,160,32,.4)}
+@media(max-width:720px){
+  .form-stages-puzzle{grid-template-columns:1fr}
+  .form-puzzle-col{position:static;flex-direction:row;flex-wrap:wrap;justify-content:center;border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem}
+  .project-body-inner{grid-template-columns:1fr}
+  .puzzle-panel{padding:.7rem 1rem;min-width:0;flex-direction:row;justify-content:center;flex-wrap:wrap}
+}
+@media(max-width:540px){.theory-cards{grid-template-columns:1fr}.form-row{flex-direction:column}.project-lion-zone{flex-wrap:wrap}.lion-badge{font-size:.6rem}.stage-row{flex-wrap:wrap}}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useRef, useEffect } = React;
+const LS_KEY='znaydi_leva_v3', LS_SEEN='znaydi_leva_seen3';
+function load(){try{return JSON.parse(localStorage.getItem(LS_KEY))||[];}catch{return[];}}
+function save(d){try{localStorage.setItem(LS_KEY,JSON.stringify(d));}catch{}}
+
+// ─── helpers ────────────────────────────────────────────────
+function daysUntil(ds){
+  if(!ds)return null;
+  const t=new Date();t.setHours(0,0,0,0);
+  const u=new Date(ds);u.setHours(0,0,0,0);
+  return Math.round((u-t)/86400000);
+}
+function lionLevel(d){
+  if(d===null)return'safe';
+  if(d<0||d<=2)return'danger';if(d<=5)return'close';if(d<=10)return'watch';return'safe';
+}
+function fmtDate(d){if(!d)return'—';return new Date(d).toLocaleDateString('uk-UA',{day:'numeric',month:'short'});}
+function cdLabel(days,done){
+  if(done)return{text:'Готово ✓',cls:'countdown-done'};
+  if(days===null)return{text:'—',cls:'countdown-done'};
+  if(days<0)return{text:`${Math.abs(days)}д просроч.`,cls:'countdown-overdue'};
+  if(days===0)return{text:'СЬОГОДНІ 🔥',cls:'countdown-overdue'};
+  if(days===1)return{text:'Завтра 😤',cls:'countdown-close'};
+  if(days<=5)return{text:`${days}д`,cls:'countdown-close'};
+  if(days<=10)return{text:`${days}д`,cls:'countdown-watch'};
+  return{text:`${days}д`,cls:'countdown-safe'};
+}
+function fmtH(h){
+  if(h==null||isNaN(h)||h===0)return null;
+  const hh=Math.floor(h),mm=Math.round((h-hh)*60);
+  if(mm===0)return`${hh}г`;return`${hh}г ${mm}м`;
+}
+function realH(est){const e=parseFloat(est);return isNaN(e)||e<=0?null:e*2;}
+
+function getLeaves(stages){
+  const r=[];
+  for(const s of stages){if(s.subStages&&s.subStages.length>0)r.push(...s.subStages);else r.push(s);}
+  return r;
+}
+function projLevel(stages){
+  if(!stages.length)return'safe';
+  const lv=getLeaves(stages);
+  if(lv.every(l=>l.done))return'done';
+  const days=lv.filter(l=>!l.done&&l.date).map(l=>daysUntil(l.date)).filter(d=>d!==null);
+  if(!days.length)return'safe';
+  return lionLevel(Math.min(...days));
+}
+function projProgress(stages){const l=getLeaves(stages);if(!l.length)return 0;return Math.round(l.filter(x=>x.done).length/l.length*100);}
+function projUrgency(p){return({danger:0,close:1,watch:2,safe:3,done:4}[projLevel(p.stages)]??5)*10000+(daysUntil(p.finalDate)??9999);}
+
+// Day-load: group real hours (est*2) per date, warn if >5h
+// finalDate is NEVER affected
+const DAY_LIMIT=5;
+function dayWarnings(stages, finalDate){
+  const map={};
+  function addLeaf(l){
+    if(!l.date||l.done)return;
+    if(l.date===finalDate)return; // deadline date не чіпаємо
+    const rh=realH(l.estHours);
+    if(!rh)return;
+    map[l.date]=(map[l.date]||0)+rh;
+  }
+  for(const s of stages){
+    if(s.subStages&&s.subStages.length>0)s.subStages.forEach(addLeaf);
+    else addLeaf(s);
+  }
+  return Object.entries(map)
+    .filter(([,h])=>h>DAY_LIMIT)
+    .sort(([a],[b])=>a.localeCompare(b))
+    .map(([date,total])=>({date,total}));
+}
+
+function spawnConfetti(){
+  const cols=['#e8a020','#d45a1a','#7fc47a','#f5e6c8','#ff8c42','#ffd700'];
+  for(let i=0;i<45;i++){
+    const el=document.createElement('div');el.className='confetti-piece';
+    const sz=6+Math.random()*9;
+    el.style.cssText=`left:${10+Math.random()*80}vw;top:0;background:${cols[~~(Math.random()*cols.length)]};animation-delay:${Math.random()*.7}s;animation-duration:${1.2+Math.random()*.9}s;width:${sz}px;height:${sz}px`;
+    document.body.appendChild(el);setTimeout(()=>el.remove(),2600);
+  }
+}
+
+const TIPS=[
+  '🧠 Стид — «криптоніт продуктивності». Не гризи себе за вчора — дивись на наступного лева.',
+  '⏰ Множ час на 2. Думаєш, займе 2 год — закладай 4. СДВГ-мозок завжди оптимістичний.',
+  '👥 Body doubling: не можеш почати — подзвони подрузі або увімкни «work with me» відео.',
+  '🎯 Точка неповернення — розкрій. Він має бути до середини терміну.',
+  '🔥 Відчуваєш лева? Це твій дофамін. Використай момент прямо зараз!',
+  '📅 Запиши зовнішнє зобов\'язання: «У п\'ятницю покажу Лені». Обіцянка — живий лев.',
+  '🌙 Кращий час для початку — прямо зараз. Навіть 10 хвилин рухають лева далі.',
+  '🎵 Плейлист без слів = менше відволікань. Спробуй lo-fi або ambient.',
+  '📦 Розбивай великий крок до найменшого. «Відкрити тканину» — вже крок.',
+  '💜 Твій мозок не лінивий — він по-іншому відчуває час. Нейробіологія, не слабкість.',
+];
+const DEF_STAGES=['Узгодження референсу з клієнтом','Виготовлення викрійки','Розкрій тканини','Чорнова збірка / примірка','Оздоблення (декор, стрази тощо)','Фото + відправка'];
+
+// ─── PUZZLE ────────────────────────────────────────────────
+function computeGrid(n){
+  if(n<=1)return{cols:1,rows:1};if(n<=2)return{cols:2,rows:1};if(n<=4)return{cols:2,rows:2};
+  if(n<=6)return{cols:3,rows:2};if(n<=9)return{cols:3,rows:3};if(n<=12)return{cols:4,rows:3};
+  if(n<=16)return{cols:4,rows:4};const c=Math.ceil(Math.sqrt(n*1.3));return{cols:c,rows:Math.ceil(n/c)};
+}
+
+// Card-back pattern for unrevealed piece (tiny lion face + amber crosshatch)
+function PieceBack({x,y,pw,ph}){
+  const cx=x+pw/2, cy=y+ph/2;
+  const r=Math.min(pw,ph)*0.28;
+  const s=0.7; // line step for hatching
+  return(<>
+    {/* subtle cross-hatch */}
+    {[-.5,0,.5].map(d=>(
+      <line key={'h'+d} x1={x} y1={cy+d*ph*0.28} x2={x+pw} y2={cy+d*ph*0.28}
+        stroke="rgba(232,160,32,0.06)" strokeWidth={0.7}/>
+    ))}
+    {[-.5,0,.5].map(d=>(
+      <line key={'v'+d} x1={cx+d*pw*0.28} y1={y} x2={cx+d*pw*0.28} y2={y+ph}
+        stroke="rgba(232,160,32,0.06)" strokeWidth={0.7}/>
+    ))}
+    {/* mane glow */}
+    <circle cx={cx} cy={cy} r={r*1.25} fill="rgba(232,160,32,0.055)"/>
+    {/* ear tufts */}
+    <polygon points={`${cx-r*.55},${cy-r*.9} ${cx-r*.35},${cy-r*.55} ${cx-r*.75},${cy-r*.5}`} fill="rgba(139,69,19,0.18)"/>
+    <polygon points={`${cx+r*.55},${cy-r*.9} ${cx+r*.35},${cy-r*.55} ${cx+r*.75},${cy-r*.5}`} fill="rgba(139,69,19,0.18)"/>
+    {/* head */}
+    <circle cx={cx} cy={cy} r={r} fill="rgba(100,50,10,0.2)"/>
+    {/* eyes */}
+    <circle cx={cx-r*.32} cy={cy-r*.12} r={r*.2} fill="rgba(232,160,32,0.35)"/>
+    <circle cx={cx+r*.32} cy={cy-r*.12} r={r*.2} fill="rgba(232,160,32,0.35)"/>
+    <circle cx={cx-r*.32} cy={cy-r*.12} r={r*.1} fill="rgba(212,90,26,0.6)"/>
+    <circle cx={cx+r*.32} cy={cy-r*.12} r={r*.1} fill="rgba(212,90,26,0.6)"/>
+    {/* nose */}
+    <ellipse cx={cx} cy={cy+r*.12} rx={r*.12} ry={r*.09} fill="rgba(180,80,20,0.4)"/>
+    {/* smile */}
+    <path d={`M ${cx-r*.22} ${cy+r*.28} Q ${cx} ${cy+r*.42} ${cx+r*.22} ${cy+r*.28}`}
+      fill="none" stroke="rgba(139,69,19,0.45)" strokeWidth={r*.12} strokeLinecap="round"/>
+    {/* whisker lines */}
+    <line x1={cx-r*.55} y1={cy+r*.08} x2={cx-r*.18} y2={cy+r*.12} stroke="rgba(245,230,200,0.12)" strokeWidth={0.6}/>
+    <line x1={cx+r*.18} y1={cy+r*.12} x2={cx+r*.55} y2={cy+r*.08} stroke="rgba(245,230,200,0.12)" strokeWidth={0.6}/>
+  </>);
+}
+
+// Fallback image when no wimmelbild generated yet (dark scene with lion)
+function FallbackScene(){return(<>
+  <rect width="240" height="240" fill="#0d0904"/>
+  <circle cx="120" cy="105" r="58" fill="rgba(139,69,19,0.2)"/>
+  <circle cx="120" cy="100" r="40" fill="rgba(100,45,8,0.35)"/>
+  <circle cx="104" cy="94" r="11" fill="rgba(232,160,32,0.18)"/>
+  <circle cx="136" cy="94" r="11" fill="rgba(232,160,32,0.18)"/>
+  <circle cx="104" cy="94" r="6" fill="rgba(212,90,26,0.55)"/>
+  <circle cx="136" cy="94" r="6" fill="rgba(212,90,26,0.55)"/>
+  <ellipse cx="120" cy="110" rx="9" ry="6" fill="rgba(160,70,20,0.35)"/>
+  <path d="M 111 122 Q 120 130 129 122" fill="none" stroke="rgba(139,69,19,0.5)" strokeWidth="2.5" strokeLinecap="round"/>
+</>);}
+
+// ─── WIMMELBILD GENERATION ────────────────────────────────
+function themeFromProject(name, notes){
+  const t=(name+' '+(notes||'')).toLowerCase();
+  if(/купальник|костюм|плаття|сукня|фігурн|ковзан/.test(t))
+    return 'ice skating rink with colorful skaters, ribbons, costumes, sequins and sparkles';
+  if(/весілля|bride|wedding/.test(t))
+    return 'colorful wedding celebration with flowers, cakes, dancing guests';
+  if(/дитяч|kids|children|маленьк/.test(t))
+    return 'magical playground with kids, toys, animals and balloons';
+  if(/природа|garden|ліс|квіти|flower/.test(t))
+    return 'enchanted garden with flowers, insects, birds and tiny fairies';
+  if(/місто|city|urban|вулиця/.test(t))
+    return 'busy colorful city street with shops, bicycles, dogs and market';
+  if(/море|пляж|beach|ocean/.test(t))
+    return 'vibrant beach with boats, fish, crabs, umbrellas and sandcastles';
+  if(/шиття|швея|sewing|ткани|atelier/.test(t))
+    return 'cozy colorful sewing atelier with fabrics, mannequins, scissors and threads';
+  return `busy colorful whimsical scene about: ${name}`;
+}
+
+async function generateWimmelbild(project, leaves){
+  const n=leaves.length;
+  if(n===0)return null;
+  const {cols,rows}=computeGrid(n);
+  const theme=themeFromProject(project.name, project.notes);
+  const pw=Math.round(240/cols), ph=Math.round(240/rows);
+
+  const prompt=`Draw a colorful Wimmelbilderbuch ("Where's Waldo" style) SVG illustration.
+Canvas: <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+Size: 240×240px total, divided into a ${cols}×${rows} grid (each cell ~${pw}×${ph}px).
+Theme: ${theme}.
+
+STYLE RULES:
+- Flat illustration, bold saturated colors: use many of these — #FF6B6B #FF8E53 #FFE66D #A8E6CF #4ECDC4 #45B7D1 #96CEB4 #FFEAA7 #DDA0DD #98D8C8 #F7DC6F #82E0AA
+- Pack the scene densely with tiny people, animals, objects — whimsical and fun, like a children's book
+- Every element clearly visible and colorful, no dark or muddy backgrounds
+- Use <circle>, <rect>, <ellipse>, <path>, <polygon> with bright fill colors
+
+HIDDEN LION RULE — CRITICAL:
+In EVERY one of the ${n} grid cells, hide a tiny recognizable lion face. The lion must be:
+  - Clearly a lion: golden mane (circle with orange/gold fill), two small eyes, tiny nose
+  - Small but findable: about 10-15% of each cell's size
+  - Integrated into the scene, not floating randomly
+  - Positioned differently in each cell
+
+Grid cell positions (x, y, width, height):
+${Array.from({length:n},(_,i)=>{const c=i%cols,r=Math.floor(i/cols);return`Cell ${i+1}: x=${c*pw} y=${r*ph} w=${pw} h=${ph}`;}).join('\n')}
+
+Return ONLY the complete SVG element starting with <svg and ending with </svg>. No markdown, no explanation, no comments.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:4000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.find(b=>b.type==='text')?.text||'';
+    const match=text.match(/<svg[\s\S]*?<\/svg>/i);
+    return match?match[0]:null;
+  }catch(e){console.error('Wimmelbild gen failed',e);return null;}
+}
+
+function PuzzleBoard({leaves,projectId,size=195,preview=false,svgCode,generating}){
+  const total=leaves.length;
+  if(total===0)return(
+    <div className="puzzle-panel">
+      <div className="puzzle-empty">🦁<br/>Додай вехи —<br/>лев розіб'ється<br/>на частини</div>
+    </div>
+  );
+
+  const {cols}=computeGrid(total);
+  const rows=Math.ceil(total/cols);
+  const W=240,H=240,gap=2.5,pw=W/cols,ph=H/rows;
+  const doneCount=!preview?leaves.filter(l=>l.done).length:0;
+  const allDone=!preview&&doneCount===total;
+  const uid=`pz${projectId}`;
+  const plural=(n)=>n===1?'фрагмент':n<5?'фрагменти':'фрагментів';
+
+  const imgUrl=svgCode
+    ?`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgCode)}`
+    :null;
+
+  return(
+    <div className="puzzle-panel">
+      <div className="puzzle-label">
+        {preview?'Попередній перегляд':generating?'🎨 Малюю картину...':'Твій лев'}
+      </div>
+      <svg viewBox="0 0 240 240" width={size} height={size}
+        style={{display:'block',borderRadius:10,overflow:'hidden',
+          boxShadow:'0 4px 28px rgba(0,0,0,0.6)',flexShrink:0}}>
+
+        <defs>
+          {Array.from({length:total},(_,i)=>{
+            const col=i%cols,row=Math.floor(i/cols);
+            return(
+              <clipPath key={i} id={`${uid}c${i}`}>
+                <rect x={col*pw+gap/2} y={row*ph+gap/2}
+                  width={pw-gap} height={ph-gap} rx="3"/>
+              </clipPath>
+            );
+          })}
+        </defs>
+
+        {Array.from({length:total},(_,i)=>{
+          const col=i%cols,row=Math.floor(i/cols);
+          const x=col*pw,y=row*ph;
+          const leaf=leaves[i];
+          const done=!preview&&leaf&&leaf.done;
+
+          return(
+            <g key={i} clipPath={`url(#${uid}c${i})`}>
+              {/* ── FRONT: Wimmelbilderbuch image ── */}
+              {imgUrl?(
+                <image href={imgUrl} x={0} y={0} width={W} height={H}
+                  style={{opacity:done?1:0,transition:'opacity .75s cubic-bezier(.4,0,.2,1)'}}
+                  preserveAspectRatio="xMidYMid slice"/>
+              ):(
+                <g style={{opacity:done?1:0,transition:'opacity .75s cubic-bezier(.4,0,.2,1)'}}>
+                  <FallbackScene/>
+                </g>
+              )}
+
+              {/* ── BACK: decorative face-down card ── */}
+              <g style={{opacity:done?0:1,transition:'opacity .75s cubic-bezier(.4,0,.2,1)'}}>
+                <rect x={x} y={y} width={pw} height={ph} fill="#0c0802"/>
+                {generating?(
+                  /* shimmer while generating */
+                  <>
+                    <rect x={x} y={y} width={pw} height={ph}
+                      fill="url(#shimGrad)" opacity="0.3"/>
+                    <circle cx={x+pw/2} cy={y+ph/2} r={Math.min(pw,ph)*0.2}
+                      fill="rgba(232,160,32,0.08)">
+                      <animate attributeName="r" values={`${Math.min(pw,ph)*0.15};${Math.min(pw,ph)*0.25};${Math.min(pw,ph)*0.15}`}
+                        dur="1.8s" repeatCount="indefinite"/>
+                    </circle>
+                  </>
+                ):(
+                  <PieceBack x={x} y={y} pw={pw} ph={ph}/>
+                )}
+              </g>
+
+              {/* ── Border ── */}
+              <rect x={x+gap/2} y={y+gap/2} width={pw-gap} height={ph-gap} rx="3"
+                fill="none"
+                stroke={done?'rgba(232,160,32,0.7)':'rgba(232,160,32,0.1)'}
+                strokeWidth={done?1.5:0.8}
+                style={{transition:'stroke .75s ease,stroke-width .75s ease'}}/>
+
+              {/* tick on revealed */}
+              {done&&(
+                <text x={x+pw-4} y={y+9} fontSize="7" textAnchor="end"
+                  fill="rgba(232,160,32,0.8)" fontFamily="sans-serif">✓</text>
+              )}
+
+              {leaf&&<title>{leaf.name}{done?' ✓':' 🔒'}</title>}
+            </g>
+          );
+        })}
+
+        {/* shimmer gradient def */}
+        <defs>
+          <linearGradient id="shimGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="rgba(232,160,32,0)"/>
+            <stop offset="50%" stopColor="rgba(232,160,32,0.25)"/>
+            <stop offset="100%" stopColor="rgba(232,160,32,0)"/>
+          </linearGradient>
+        </defs>
+
+        {allDone&&(
+          <rect width="240" height="240" fill="rgba(232,160,32,0.10)"
+            style={{animation:'glowp 2s ease-in-out infinite'}}/>
+        )}
+      </svg>
+
+      {preview?(
+        <div className="puzzle-count">{total} {plural(total)}</div>
+      ):generating?(
+        <div className="puzzle-gen-msg">Художник малює виммельбух…</div>
+      ):allDone?(
+        <div className="puzzle-done-msg">🦁 Лева знайдено!</div>
+      ):(
+        <div className="puzzle-count">{doneCount}/{total} {plural(doneCount===0?total:doneCount)}</div>
+      )}
+    </div>
+  );
+}
+
+// ─── TIME FIELDS ─────────────────────────────────────────────
+function TimeFields({est,onEst}){
+  const rh=realH(est);
+  return(<div className="time-col">
+    <input type="number" min="0.25" max="24" step="0.25" placeholder="год"
+      className="time-inp" value={est||''} onChange={e=>onEst(e.target.value)}
+      title="Плановий час у годинах"/>
+    <div className="time-lbl">план</div>
+    {est&&rh&&<div className="time-real-lbl">×2: {fmtH(rh)}</div>}
+  </div>);
+}
+
+// ─── DAY WARNING BLOCK ───────────────────────────────────────
+function DayWarnBlock({warns}){
+  if(!warns.length)return null;
+  return(<div className="day-warnings">
+    {warns.map(w=>(
+      <div className="day-warn" key={w.date}>
+        <span style={{flexShrink:0}}>⚠️</span>
+        <span>
+          <strong>{fmtDate(w.date)}</strong> — не состыковка, пересмотри даты!{' '}
+          Реальний час: <strong>{fmtH(w.total)}</strong> (більше {DAY_LIMIT}г)
+        </span>
+      </div>
+    ))}
+  </div>);
+}
+
+// ─── PROJECT FORM ────────────────────────────────────────────
+function ProjectForm({existing,onSave,onCancel,isOverlay}){
+  const [name,setName]=useState(existing?.name||'');
+  const [finalDate,setFinalDate]=useState(existing?.finalDate||'');
+  const [notes,setNotes]=useState(existing?.notes||'');
+  const [stages,setStages]=useState(()=>
+    existing?.stages
+      ?existing.stages.map(s=>({...s,subStages:(s.subStages||[]).map(ss=>({...ss}))}))
+      :DEF_STAGES.map((s,i)=>({id:Date.now()+i,name:s,date:'',estHours:'',done:false,subStages:[]}))
+  );
+
+  const dragSrcRef=useRef(null);
+  const previewLeaves=useMemo(()=>getLeaves(stages.filter(s=>s.name.trim())),[stages]);
+  const warns=useMemo(()=>dayWarnings(stages.filter(s=>s.name.trim()),finalDate),[stages,finalDate]);
+
+  function addStage(){setStages(p=>[...p,{id:Date.now(),name:'',date:'',estHours:'',done:false,subStages:[]}]);}
+  function removeStage(id){setStages(p=>p.filter(s=>s.id!==id));}
+  function upS(id,f,v){setStages(p=>p.map(s=>s.id===id?{...s,[f]:v}:s));}
+  function addSub(sid){setStages(p=>p.map(s=>s.id===sid?{...s,subStages:[...(s.subStages||[]),{id:Date.now(),name:'',date:'',estHours:'',done:false}]}:s));}
+  function removeSub(sid,ssid){setStages(p=>p.map(s=>s.id===sid?{...s,subStages:(s.subStages||[]).filter(ss=>ss.id!==ssid)}:s));}
+  function upSS(sid,ssid,f,v){setStages(p=>p.map(s=>s.id===sid?{...s,subStages:(s.subStages||[]).map(ss=>ss.id===ssid?{...ss,[f]:v}:ss)}:s));}
+
+  // Drag-reorder stages in form
+  function sDragStart(e,id){dragSrcRef.current=id;e.dataTransfer.effectAllowed='move';}
+  function sDragOver(e,id){
+    e.preventDefault();
+    if(dragSrcRef.current===id)return;
+    setStages(p=>{
+      const fr=p.findIndex(s=>s.id===dragSrcRef.current),to=p.findIndex(s=>s.id===id);
+      if(fr<0||to<0||fr===to)return p;
+      const n=[...p];n.splice(to,0,n.splice(fr,1)[0]);return n;
+    });
+  }
+
+  function handleSave(){
+    if(!name.trim())return;
+    onSave({
+      id:existing?.id||Date.now(),name:name.trim(),finalDate,notes:notes.trim(),
+      createdAt:existing?.createdAt||new Date().toISOString(),
+      stages:stages.filter(s=>s.name.trim()).map(s=>({
+        ...s,
+        estHours:s.estHours!==''&&s.estHours!=null?parseFloat(s.estHours):null,
+        subStages:(s.subStages||[]).filter(ss=>ss.name.trim()).map(ss=>({
+          ...ss,estHours:ss.estHours!==''&&ss.estHours!=null?parseFloat(ss.estHours):null
+        }))
+      }))
+    });
+  }
+
+  const wrapCls=isOverlay?'edit-overlay-card':'new-project-card';
+  return(<div className={wrapCls}>
+    <h2>{existing?'✏️ Редагувати проект':'🦁 Новий проект'}</h2>
+    <div className="form-row">
+      <div className="form-group" style={{flex:2}}>
+        <label>Назва проекту</label>
+        <input type="text" placeholder="напр. Купальник для Олені" value={name} onChange={e=>setName(e.target.value)}/>
+      </div>
+      <div className="form-group">
+        <label>Фінальний дедлайн 🔒</label>
+        <input type="date" value={finalDate} onChange={e=>setFinalDate(e.target.value)}/>
+      </div>
+    </div>
+    <div className="form-group" style={{marginBottom:'1rem'}}>
+      <label>Нотатки (необов'язково)</label>
+      <textarea placeholder="клієнт, деталі, посилання..." value={notes} onChange={e=>setNotes(e.target.value)}/>
+    </div>
+
+    <DayWarnBlock warns={warns}/>
+
+    <div className="form-stages-puzzle">
+      <div>
+        <div className="stages-title">
+          Вехи та міні-етапи
+          <span style={{fontWeight:400,color:'rgba(245,230,200,.28)',marginLeft:'.5rem',textTransform:'none',letterSpacing:0,fontSize:'.7rem'}}>
+            — вкажи план. час → показується реальний (×2) → система попередить якщо в один день &gt;5г. Потягни ☰ для зміни порядку.
+          </span>
+        </div>
+        {stages.map((s,i)=>(
+          <div key={s.id} style={{marginBottom:'.65rem'}}
+            draggable onDragStart={e=>sDragStart(e,s.id)} onDragOver={e=>sDragOver(e,s.id)} onDragEnd={()=>{}}>
+            <div className="stage-row" style={{background:'rgba(232,160,32,.06)',borderRadius:10,padding:'.3rem .45rem'}}>
+              <span className="stage-drag-handle" style={{fontSize:'1rem',cursor:'grab',color:'rgba(245,230,200,.3)'}}>☰</span>
+              <span style={{fontSize:'.8rem',color:'var(--amber)',flexShrink:0}}>🏁</span>
+              <input type="text" placeholder={`Веха ${i+1}`} value={s.name}
+                onChange={e=>upS(s.id,'name',e.target.value)} style={{fontWeight:700,flex:2,minWidth:100}}/>
+              <input type="date" value={s.date||''} onChange={e=>upS(s.id,'date',e.target.value)} style={{flex:1,minWidth:120}}/>
+              <TimeFields est={s.estHours} onEst={v=>upS(s.id,'estHours',v)}/>
+              <button className="btn-icon" onClick={()=>addSub(s.id)} title="Додати міні-етап"
+                style={{color:'rgba(232,160,32,.7)',borderColor:'rgba(232,160,32,.25)',fontSize:'.72rem',width:'auto',height:'auto',padding:'.28rem .5rem',borderRadius:8,flexShrink:0}}>+↳</button>
+              <button className="btn-icon" onClick={()=>removeStage(s.id)} title="Видалити" style={{flexShrink:0}}>✕</button>
+            </div>
+            {(s.subStages||[]).map((ss,j)=>(
+              <div className="stage-row" key={ss.id}
+                style={{paddingLeft:'1.3rem',background:'rgba(245,230,200,.025)',borderRadius:8,marginTop:'.2rem'}}>
+                <span style={{fontSize:'.72rem',color:'rgba(245,230,200,.25)',flexShrink:0}}>↳</span>
+                <input type="text" placeholder={`Міні-етап ${j+1}`} value={ss.name}
+                  onChange={e=>upSS(s.id,ss.id,'name',e.target.value)} style={{flex:2,minWidth:100}}/>
+                <input type="date" value={ss.date||''} onChange={e=>upSS(s.id,ss.id,'date',e.target.value)} style={{flex:1,minWidth:120}}/>
+                <TimeFields est={ss.estHours} onEst={v=>upSS(s.id,ss.id,'estHours',v)}/>
+                <button className="btn-icon" onClick={()=>removeSub(s.id,ss.id)} title="Видалити" style={{flexShrink:0}}>✕</button>
+              </div>
+            ))}
+          </div>
+        ))}
+        <button className="btn-add-stage" onClick={addStage}>+ Додати Веху</button>
+        <div className="form-actions">
+          <button className="btn-secondary" onClick={onCancel}>Скасувати</button>
+          <button className="btn-primary" onClick={handleSave} style={{padding:'.65rem 1.6rem',fontSize:'.95rem'}}>
+            {existing?'Зберегти':'Запустити лева'}
+          </button>
+        </div>
+      </div>
+      <div className="form-puzzle-col">
+        <PuzzleBoard leaves={previewLeaves} projectId={existing?.id||'new'} size={190} preview={true} svgCode={existing?.wimmelbild}/>
+      </div>
+    </div>
+  </div>);
+}
+
+// ─── PROJECT CARD ─────────────────────────────────────────────
+const LEMOJIS={safe:'🦁',watch:'🦁',close:'😤',danger:'🔥',done:'✅'};
+const LLABELS={safe:'Спокійний',watch:'Прокидається',close:'Бачить тебе',danger:'БІЖИ!',done:'Приборканий'};
+const LCLS={safe:'lion-safe',watch:'lion-watch',close:'lion-close',danger:'lion-danger',done:'lion-done'};
+
+function ProjectCard({project,onToggle,onDelete,onEdit,onProjDragStart,onProjDragOver,onProjDragEnd,isDragging,isDragOver,generating}){
+  const [collapsed,setCollapsed]=useState(false);
+  const level=projLevel(project.stages);
+  const progress=projProgress(project.stages);
+  const daysLeft=project.finalDate?daysUntil(project.finalDate):null;
+  const leaves=getLeaves(project.stages);
+  const warns=useMemo(()=>dayWarnings(project.stages,project.finalDate),[project.stages,project.finalDate]);
+
+  const daysLabel=daysLeft===null?'':daysLeft<0?`${Math.abs(daysLeft)}д прострочено`:daysLeft===0?'Сьогодні!':`${daysLeft}д до здачі`;
+  const daysColor=daysLeft!==null&&daysLeft<=3?'#ff5555':daysLeft!==null&&daysLeft<=7?'#ff8c42':'rgba(245,230,200,0.4)';
+
+  // stage drag-reorder
+  const stageDragSrc=useRef(null);
+  function sDragStart(e,id){e.stopPropagation();stageDragSrc.current=id;e.dataTransfer.effectAllowed='move';}
+  function sDragOver(e,id,pid){
+    e.preventDefault();e.stopPropagation();
+    if(stageDragSrc.current===id)return;
+    onToggle(pid,'__reorder__',stageDragSrc.current,id);
+  }
+  function sDragEnd(e){e.stopPropagation();stageDragSrc.current=null;}
+
+  let cls=`project-card${collapsed?' collapsed':''}${isDragging?' dragging':''}${isDragOver?' drag-over':''}`;
+
+  return(<div className={cls}
+    draggable
+    onDragStart={e=>onProjDragStart(e,project.id)}
+    onDragOver={e=>{e.preventDefault();onProjDragOver(e,project.id);}}
+    onDragEnd={onProjDragEnd}>
+
+    <div className="project-header">
+      <span className="drag-handle" onMouseDown={e=>e.stopPropagation()} title="Перетягни проект">⠿</span>
+      <div className="project-header-click" onClick={()=>setCollapsed(c=>!c)}>
+        <div className="project-info">
+          <h2>{project.name}</h2>
+          <div className="project-meta">
+            {project.finalDate&&<span style={{color:daysColor}}>📅 {fmtDate(project.finalDate)}{daysLabel?` · ${daysLabel}`:''}</span>}
+            {leaves.length>0&&<span className="project-meta-tag">{leaves.filter(l=>l.done).length}/{leaves.length} кроків</span>}
+            {warns.length>0&&<span style={{color:'#ff8a80',fontSize:'.7rem'}}>⚠️ {warns.length} несост.</span>}
+          </div>
+        </div>
+      </div>
+      <div className="project-lion-zone">
+        <div className={`lion-badge ${LCLS[level]}`}>
+          <span className="lion-emoji">{LEMOJIS[level]}</span>
+          {LLABELS[level]}
+        </div>
+        <div className="project-actions">
+          <button className="btn-icon" onClick={e=>{e.stopPropagation();onEdit(project);}} title="Редагувати"
+            style={{color:'rgba(232,160,32,.5)',borderColor:'rgba(232,160,32,.2)'}}>✏️</button>
+          <button className="btn-icon" onClick={e=>{e.stopPropagation();onDelete(project.id);}} title="Видалити"
+            style={{color:'rgba(245,230,200,.25)',borderColor:'rgba(245,230,200,.1)'}}>🗑</button>
+        </div>
+        <span style={{fontSize:'.8rem',color:'rgba(245,230,200,.3)',cursor:'pointer',userSelect:'none'}}
+          onClick={()=>setCollapsed(c=>!c)}>{collapsed?'▶':'▼'}</span>
+      </div>
+    </div>
+
+    <div className="project-body">
+      <div className="project-body-inner">
+        <div className="stages-col">
+          {project.stages.length>0&&(
+            <div className="project-progress">
+              <div className="progress-label"><span>Прогрес</span><span>{progress}%</span></div>
+              <div className="progress-track"><div className="progress-fill" style={{width:progress+'%'}}/></div>
+            </div>
+          )}
+          {project.notes&&(
+            <div className="project-notes"><div className="project-notes-label">Нотатки</div>{project.notes}</div>
+          )}
+          {warns.length>0&&(
+            <div className="card-warnings">
+              {warns.map(w=>(
+                <div className="card-warn-item" key={w.date}>
+                  ⚠️ <span><strong>{fmtDate(w.date)}</strong> — не состыковка, пересмотри даты!{' '}
+                  Реальний час у цей день: <strong>{fmtH(w.total)}</strong> (більше {DAY_LIMIT}г)</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="stages-list">
+            {project.stages.map(stage=>{
+              const hasSub=stage.subStages&&stage.subStages.length>0;
+              const stageDone=hasSub?stage.subStages.every(ss=>ss.done):stage.done;
+              const days=stageDone?null:daysUntil(stage.date);
+              const cd=cdLabel(days,stageDone);
+              const isOver=!stageDone&&days!==null&&days<0;
+              const subDone=hasSub?stage.subStages.filter(ss=>ss.done).length:0;
+              const rh=realH(stage.estHours);
+
+              return(<div key={stage.id}>
+                <div className={`stage-item${stageDone?' done':''}${isOver?' overdue':''}`}
+                  draggable={!hasSub}
+                  onDragStart={e=>!hasSub&&sDragStart(e,stage.id)}
+                  onDragOver={e=>!hasSub&&sDragOver(e,stage.id,project.id)}
+                  onDragEnd={e=>!hasSub&&sDragEnd(e)}
+                  onClick={()=>!hasSub&&onToggle(project.id,stage.id)}
+                  style={hasSub?{cursor:'default',background:'rgba(232,160,32,.04)',borderRadius:10}:{}}>
+                  {!hasSub&&<span className="stage-drag-handle" onClick={e=>e.stopPropagation()}>☰</span>}
+                  {hasSub
+                    ?<span style={{fontSize:'.85rem',flexShrink:0}}>🏁</span>
+                    :<div className="stage-check">{stage.done&&<span className="stage-check-inner">✓</span>}</div>
+                  }
+                  <div className="stage-content">
+                    <div className="stage-name" style={hasSub?{fontWeight:700,color:'var(--amber)'}:{}}>{stage.name}</div>
+                    <div className="stage-meta">
+                      {stage.date&&<span>{fmtDate(stage.date)}</span>}
+                      {stage.estHours!=null&&<span className="tbadge tbadge-est">~{fmtH(stage.estHours)}</span>}
+                      {rh!=null&&<span className="tbadge tbadge-real">реал: {fmtH(rh)}</span>}
+                      {hasSub&&<span>{subDone}/{stage.subStages.length}</span>}
+                    </div>
+                  </div>
+                  {!hasSub&&stage.date&&<span className={`stage-countdown ${cd.cls}`}>{cd.text}</span>}
+                </div>
+
+                {hasSub&&stage.subStages.map(ss=>{
+                  const sd=ss.done?null:daysUntil(ss.date);
+                  const sc=cdLabel(sd,ss.done);
+                  const so=!ss.done&&sd!==null&&sd<0;
+                  const srh=realH(ss.estHours);
+                  return(<div key={ss.id}
+                    className={`stage-item${ss.done?' done':''}${so?' overdue':''}`}
+                    draggable
+                    onDragStart={e=>{e.stopPropagation();stageDragSrc.current=ss.id;}}
+                    onClick={()=>onToggle(project.id,stage.id,ss.id)}
+                    style={{paddingLeft:'2rem'}}>
+                    <span className="stage-drag-handle" onClick={e=>e.stopPropagation()}>☰</span>
+                    <div className="stage-check">{ss.done&&<span className="stage-check-inner">✓</span>}</div>
+                    <div className="stage-content">
+                      <div className="stage-name" style={{fontSize:'.83rem'}}>{ss.name}</div>
+                      <div className="stage-meta">
+                        {ss.date&&<span>{fmtDate(ss.date)}</span>}
+                        {ss.estHours!=null&&<span className="tbadge tbadge-est">~{fmtH(ss.estHours)}</span>}
+                        {srh!=null&&<span className="tbadge tbadge-real">реал: {fmtH(srh)}</span>}
+                      </div>
+                    </div>
+                    {ss.date&&<span className={`stage-countdown ${sc.cls}`}>{sc.text}</span>}
+                  </div>);
+                })}
+              </div>);
+            })}
+            {!project.stages.length&&<div style={{fontSize:'.82rem',color:'rgba(245,230,200,.25)',padding:'.5rem 0'}}>Немає етапів</div>}
+          </div>
+        </div>
+        <PuzzleBoard leaves={leaves} projectId={project.id} size={195}
+          svgCode={project.wimmelbild} generating={generating}/>
+      </div>
+    </div>
+  </div>);
+}
+
+// ─── MODALS ───────────────────────────────────────────────────
+function DeleteConfirm({name,onConfirm,onCancel}){
+  return(<div className="overlay"><div className="overlay-card">
+    <h3>Відпустити лева? 🦁</h3>
+    <p>Видалити <strong style={{color:'var(--amber)'}}>{name}</strong>?<br/>Це незворотно.</p>
+    <div className="overlay-actions">
+      <button className="btn-secondary" onClick={onCancel}>Залишити</button>
+      <button className="btn-danger" onClick={onConfirm}>Видалити</button>
+    </div>
+  </div></div>);
+}
+function EditOverlay({project,onSave,onCancel}){
+  return(<div className="edit-overlay">
+    <ProjectForm existing={project} onSave={onSave} onCancel={onCancel} isOverlay/>
+  </div>);
+}
+function Onboarding({onStart}){
+  return(<div className="onboard">
+    <div className="onboard-lion">🦁</div>
+    <h1>Знайди Лева</h1>
+    <p className="onboard-subtitle">Система планування для мозку з СДВГ</p>
+    <div className="theory-cards">
+      {[
+        ['🧠','Часова сліпота','Мозок не відчуває дедлайн, поки він не «видно». За 3 тижні — лев далеко. За 18 годин — прямо перед тобою.'],
+        ['⚡','Дофамін і адреналін','Пік продуктивності в останній момент — це адреналін, не лінь. Ціна — виснаження і «яма» після.'],
+        ['⏱️','Множник ×2 + перевантаження','Вкажи плановий час — реальний рахується ×2. Якщо декілька завдань в один день набирають більше 5г — автоматичне попередження! Дата дедлайну не змінюється.'],
+        ['🧩','Лев-пазл + перетягування','Кожна веха — шматочок пазла. Перетягуй вехи й проекти місцями, щоб знайти найкращий розклад!'],
+      ].map(([icon,title,text])=>(
+        <div className="theory-card" key={title}><div className="icon">{icon}</div><h3>{title}</h3><p>{text}</p></div>
+      ))}
+    </div>
+    <button className="btn-primary" onClick={onStart}>Знайти свого лева →</button>
+  </div>);
+}
+
+// ─── APP ──────────────────────────────────────────────────────
+function App(){
+  const [seen,setSeen]=useState(()=>!!localStorage.getItem(LS_SEEN));
+  const [projects,setProjects]=useState(load);
+  const [showForm,setShowForm]=useState(false);
+  const [deleteId,setDeleteId]=useState(null);
+  const [editProject,setEditProject]=useState(null);
+  const [search,setSearch]=useState('');
+  const [filter,setFilter]=useState('all');
+  const [sort,setSort]=useState('urgency');
+  const [tipIdx,setTipIdx]=useState(()=>new Date().getDate()%TIPS.length);
+  const [generatingIds,setGeneratingIds]=useState({}); // {projectId: true}
+
+  const dragProjId=useRef(null);
+  const [dragOverId,setDragOverId]=useState(null);
+  const projsRef=useRef(projects);
+  projsRef.current=projects;
+
+  function onProjDragStart(e,id){dragProjId.current=id;e.dataTransfer.effectAllowed='move';}
+  function onProjDragOver(e,id){
+    e.preventDefault();
+    if(dragProjId.current===id)return;
+    setDragOverId(id);
+    setProjects(prev=>{
+      const fr=prev.findIndex(p=>p.id===dragProjId.current);
+      const to=prev.findIndex(p=>p.id===id);
+      if(fr<0||to<0||fr===to)return prev;
+      const n=[...prev];n.splice(to,0,n.splice(fr,1)[0]);return n;
+    });
+  }
+  function onProjDragEnd(){
+    dragProjId.current=null;setDragOverId(null);
+    save(projsRef.current);
+  }
+
+  function handleStart(){localStorage.setItem(LS_SEEN,'1');setSeen(true);}
+  function handleSave(project){
+    const updated=[project,...projects.filter(p=>p.id!==project.id)];
+    setProjects(updated);save(updated);setShowForm(false);setEditProject(null);
+
+    // Generate wimmelbild if not present yet
+    if(!project.wimmelbild){
+      const leaves=getLeaves(project.stages);
+      if(leaves.length>0){
+        setGeneratingIds(g=>({...g,[project.id]:true}));
+        generateWimmelbild(project,leaves).then(svgCode=>{
+          if(!svgCode){setGeneratingIds(g=>{const n={...g};delete n[project.id];return n;});return;}
+          setProjects(prev=>{
+            const next=prev.map(p=>p.id===project.id?{...p,wimmelbild:svgCode}:p);
+            save(next);return next;
+          });
+          setGeneratingIds(g=>{const n={...g};delete n[project.id];return n;});
+        });
+      }
+    }
+  }
+
+  function handleToggle(projectId,stageId,subOrFrom,reorderTo){
+    // stage reorder
+    if(stageId==='__reorder__'){
+      setProjects(prev=>{
+        const updated=prev.map(p=>{
+          if(p.id!==projectId)return p;
+          const fr=p.stages.findIndex(s=>s.id===subOrFrom);
+          const to=p.stages.findIndex(s=>s.id===reorderTo);
+          if(fr<0||to<0||fr===to)return p;
+          const n=[...p.stages];n.splice(to,0,n.splice(fr,1)[0]);
+          return{...p,stages:n};
+        });
+        save(updated);return updated;
+      });
+      return;
+    }
+    const updated=projects.map(p=>{
+      if(p.id!==projectId)return p;
+      const stages=p.stages.map(s=>{
+        if(s.id!==stageId)return s;
+        if(subOrFrom){
+          const subs=(s.subStages||[]).map(ss=>ss.id===subOrFrom?{...ss,done:!ss.done}:ss);
+          return{...s,subStages:subs,done:subs.every(ss=>ss.done)};
+        }
+        return{...s,done:!s.done};
+      });
+      const wasAllDone=getLeaves(p.stages).every(l=>l.done);
+      const isAllDone=getLeaves(stages).every(l=>l.done);
+      if(!wasAllDone&&isAllDone&&getLeaves(stages).length>0)spawnConfetti();
+      return{...p,stages};
+    });
+    setProjects(updated);save(updated);
+  }
+
+  function confirmDelete(){
+    const updated=projects.filter(p=>p.id!==deleteId);
+    setProjects(updated);save(updated);setDeleteId(null);
+  }
+
+  const totalP=projects.length;
+  const doneP=projects.filter(p=>projLevel(p.stages)==='done').length;
+  const dangerP=projects.filter(p=>projLevel(p.stages)==='danger').length;
+  const totalL=projects.reduce((a,p)=>a+getLeaves(p.stages).length,0);
+  const doneL=projects.reduce((a,p)=>a+getLeaves(p.stages).filter(l=>l.done).length,0);
+
+  let disp=projects;
+  if(search.trim()){const q=search.toLowerCase();disp=disp.filter(p=>p.name.toLowerCase().includes(q)||(p.notes||'').toLowerCase().includes(q)||p.stages.some(s=>s.name.toLowerCase().includes(q)||(s.subStages||[]).some(ss=>ss.name.toLowerCase().includes(q))));}
+  if(filter==='active')disp=disp.filter(p=>projLevel(p.stages)!=='done');
+  if(filter==='done')disp=disp.filter(p=>projLevel(p.stages)==='done');
+  if(filter==='danger')disp=disp.filter(p=>['danger','close'].includes(projLevel(p.stages)));
+  // only sort when not actively dragging
+  if(!dragProjId.current){
+    if(sort==='urgency')disp=[...disp].sort((a,b)=>projUrgency(a)-projUrgency(b));
+    if(sort==='newest')disp=[...disp].sort((a,b)=>b.id-a.id);
+    if(sort==='name')disp=[...disp].sort((a,b)=>a.name.localeCompare(b.name,'uk'));
+    if(sort==='progress')disp=[...disp].sort((a,b)=>projProgress(b.stages)-projProgress(a.stages));
+  }
+
+  const ptd=projects.find(p=>p.id===deleteId);
+  if(!seen)return<Onboarding onStart={handleStart}/>;
+
+  return(<div className="app">
+    <div className="app-header">
+      <h1>🦁 Знайди Лева</h1>
+      <div className="header-actions">
+        <select className="sort-select" value={sort} onChange={e=>setSort(e.target.value)}>
+          <option value="urgency">За терміновістю</option>
+          <option value="newest">За датою</option>
+          <option value="name">За назвою</option>
+          <option value="progress">За прогресом</option>
+        </select>
+        <button className="btn-ghost" onClick={()=>{localStorage.removeItem(LS_SEEN);setSeen(false);}}>
+          Як це працює?
+        </button>
+      </div>
+    </div>
+
+    {projects.length>0&&(
+      <div className="stats-bar">
+        <div className="stat-chip">🦁 Проектів: <strong>{totalP}</strong></div>
+        <div className="stat-chip">✅ Завершено: <strong>{doneP}</strong></div>
+        {dangerP>0&&<div className="stat-chip" style={{borderColor:'rgba(255,85,85,.3)',color:'#ff5555'}}>🔥 Горить: <strong>{dangerP}</strong></div>}
+        {totalL>0&&<div className="stat-chip">🧩 Фрагментів: <strong>{doneL}/{totalL}</strong></div>}
+      </div>
+    )}
+
+    <div className="tip-bar" onClick={()=>setTipIdx(i=>(i+1)%TIPS.length)}>
+      <span>💡</span><span>{TIPS[tipIdx]}</span><span className="tip-next">→</span>
+    </div>
+
+    {!showForm&&(
+      <button className="btn-primary" onClick={()=>setShowForm(true)}
+        style={{width:'100%',marginBottom:'1.2rem',borderRadius:14,fontSize:'1rem'}}>
+        + Новий проект
+      </button>
+    )}
+    {showForm&&<ProjectForm onSave={handleSave} onCancel={()=>setShowForm(false)}/>}
+
+    {projects.length>0&&(<>
+      <div className="search-wrap">
+        <span className="search-icon">🔍</span>
+        <input className="search-input" placeholder="Пошук проектів та етапів..."
+          value={search} onChange={e=>setSearch(e.target.value)}/>
+      </div>
+      <div className="filter-tabs">
+        {[['all','Всі'],['active','Активні'],['danger','🔥 Горять'],['done','✅ Готові']].map(([k,l])=>(
+          <button key={k} className={`filter-tab${filter===k?' active':''}`} onClick={()=>setFilter(k)}>{l}</button>
+        ))}
+      </div>
+    </>)}
+
+    {!projects.length&&!showForm&&(
+      <div className="empty-state"><div className="e-lion">🦁</div>
+        <p>Левів ще немає.<br/>Додай перший проект — і знайди свого лева.</p>
+      </div>
+    )}
+    {projects.length>0&&!disp.length&&(
+      <div className="empty-state"><div className="e-lion" style={{fontSize:'2.5rem'}}>🔍</div><p>Нічого не знайдено.</p></div>
+    )}
+
+    <div className="projects-grid">
+      {disp.map(p=>(
+        <ProjectCard key={p.id} project={p}
+          onToggle={handleToggle}
+          onDelete={setDeleteId}
+          onEdit={setEditProject}
+          onProjDragStart={onProjDragStart}
+          onProjDragOver={onProjDragOver}
+          onProjDragEnd={onProjDragEnd}
+          isDragging={dragProjId.current===p.id}
+          isDragOver={dragOverId===p.id&&dragProjId.current!==p.id}
+          generating={!!generatingIds[p.id]}
+        />
+      ))}
+    </div>
+
+    {deleteId&&ptd&&<DeleteConfirm name={ptd.name} onConfirm={confirmDelete} onCancel={()=>setDeleteId(null)}/>}
+    {editProject&&<EditOverlay project={editProject} onSave={handleSave} onCancel={()=>setEditProject(null)}/>}
+  </div>);
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
