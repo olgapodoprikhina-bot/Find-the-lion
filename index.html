@@ -2755,10 +2755,10 @@ function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,t
           onPickImage={onPickImage?()=>onPickImage(project.id):null}
           allProjects={allProjects||[]}
           currentProjectId={project.id}/>
-      </div>
-    </div>
-    </div>}{/* end stages tab */}
-  </div>
+      </div>{/* end project-body-inner */}
+      </div>}{/* end stages tab */}
+    </div>{/* end project-body */}
+  </div>{/* end project-card */}
   {showCsvModal&&<PriorityModal project={project} leaves={leaves} onClose={()=>setShowCsvModal(false)}/>}
   {editingTagId&&tags&&<TagPicker
     currentTagId={project.stages.find(s=>s.id===editingTagId)?.tagId||null}
