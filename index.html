@@ -2307,6 +2307,102 @@ function ArchiveModal({archive,onClose,onRestore,onDeletePermanently,projects,ba
 }
 
 // ─── PROJECT CARD ─────────────────────────────────────────────
+function ProjectAnalytics({project, togglProjData}){
+  const today=new Date();today.setHours(0,0,0,0);
+  const start=project.startDate?new Date(project.startDate+'T00:00:00'):null;
+  const end=project.finalDate?new Date(project.finalDate+'T00:00:00'):null;
+  const totalDays=start&&end?Math.round((end-start)/86400000):null;
+  const elapsed=start?Math.max(0,Math.round((today-start)/86400000)):null;
+  const left=end?Math.max(0,Math.round((end-today)/86400000)):null;
+  const progress=projProgress(project.stages);
+  const stages=project.stages.filter(s=>s.type!=='deadline');
+  const doneStages=stages.filter(s=>s.done);
+  const totalPlan=stages.reduce((a,s)=>a+parseFloat(s.estHours||0),0);
+  const totalFact=stages.reduce((a,s)=>a+parseFloat(s.manualRealHours||0),0);
+  const togglH=togglProjData?.totalH||0;
+  const factH=togglH||totalFact;
+  const delta=totalPlan>0&&factH>0?factH-totalPlan:null;
+  const maxH=Math.max(...stages.map(s=>Math.max(parseFloat(s.estHours||0),parseFloat(s.manualRealHours||0))),1);
+
+  return(
+    <div className="proj-analytics">
+      <div className="pa-row">
+        {start&&<div className="pa-chip">
+          <div className="pa-chip-val">{start.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})}</div>
+          <div className="pa-chip-lbl">Початок</div>
+        </div>}
+        {end&&<div className="pa-chip">
+          <div className="pa-chip-val" style={{color:left===0?'#ff5555':left<=3?'#ff8c42':'var(--amber)'}}>
+            {end.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})}
+          </div>
+          <div className="pa-chip-lbl">Дедлайн</div>
+        </div>}
+        {totalDays!==null&&<div className="pa-chip">
+          <div className="pa-chip-val">{totalDays}</div>
+          <div className="pa-chip-lbl">Всього днів</div>
+        </div>}
+        {elapsed!==null&&<div className="pa-chip">
+          <div className="pa-chip-val">{elapsed}</div>
+          <div className="pa-chip-lbl">Минуло</div>
+        </div>}
+        {left!==null&&<div className="pa-chip" style={{borderColor:left<=3?'rgba(255,85,85,.25)':'rgba(245,230,200,.08)'}}>
+          <div className="pa-chip-val" style={{color:left===0?'#ff5555':left<=3?'#ff8c42':left<=7?'var(--amber)':'#5dbb7e'}}>{left}</div>
+          <div className="pa-chip-lbl">Залишилось</div>
+        </div>}
+      </div>
+      <div className="pa-row">
+        <div className="pa-chip">
+          <div className="pa-chip-val">{progress}%</div>
+          <div className="pa-chip-lbl">Прогрес</div>
+        </div>
+        <div className="pa-chip">
+          <div className="pa-chip-val">{doneStages.length}/{stages.length}</div>
+          <div className="pa-chip-lbl">Вех виконано</div>
+        </div>
+        {totalPlan>0&&<div className="pa-chip">
+          <div className="pa-chip-val">{fmtTogglH(totalPlan)}</div>
+          <div className="pa-chip-lbl">Плановий час</div>
+        </div>}
+        {factH>0&&<div className="pa-chip" style={{borderColor:'rgba(93,187,126,.2)'}}>
+          <div className="pa-chip-val" style={{color:'#5dbb7e'}}>{fmtTogglH(factH)}</div>
+          <div className="pa-chip-lbl">{togglH?'Toggl факт':'Ручний факт'}</div>
+        </div>}
+        {delta!==null&&<div className="pa-chip" style={{borderColor:delta>0?'rgba(255,85,85,.2)':'rgba(93,187,126,.2)'}}>
+          <div className="pa-chip-val" style={{color:delta>0?'#ff8a80':'#5dbb7e'}}>
+            {delta>0?'+':''}{fmtTogglH(Math.abs(delta))}
+          </div>
+          <div className="pa-chip-lbl">{delta>0?'Понад план':'Зекономлено'}</div>
+        </div>}
+      </div>
+      {stages.some(s=>s.estHours||s.manualRealHours)&&(
+        <div>
+          <div className="pa-section-title">Час по вехах</div>
+          {stages.filter(s=>s.estHours||s.manualRealHours).map(s=>{
+            const pH=parseFloat(s.estHours||0);
+            const fH=parseFloat(s.manualRealHours||0);
+            return(
+              <div key={s.id} className="pa-stage-row">
+                <span style={{fontSize:'.7rem',color:s.done?'#5dbb7e':'rgba(245,230,200,.3)',flexShrink:0}}>{s.done?'✓':'○'}</span>
+                <span className="pa-stage-name">{s.name}</span>
+                {pH>0&&<span style={{fontSize:'.68rem',color:'rgba(232,160,32,.6)',flexShrink:0}}>{fmtTogglH(pH)}</span>}
+                {fH>0&&<>
+                  <div className="pa-bar-wrap">
+                    <div className="pa-bar-fill" style={{
+                      width:(fH/maxH*100)+'%',
+                      background:fH>pH&&pH>0?'linear-gradient(90deg,#ff5555,#c0392b)':'linear-gradient(90deg,#5dbb7e,#27ae60)'
+                    }}/>
+                  </div>
+                  <span style={{fontSize:'.68rem',color:fH>pH&&pH>0?'#ff8a80':'#5dbb7e',flexShrink:0,minWidth:36,textAlign:'right'}}>{fmtTogglH(fH)}</span>
+                </>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,tags,onAddTag,onProjDragStart,onProjDragOver,onProjDragEnd,isDragging,isDragOver,onNewImage,onPickImage,customImage,onPuzzlePlace,onPuzzlePlaceAll,allProjects,togglProjData}){
   const [collapsed,setCollapsed]=useState(true);
   const [showCsvModal,setShowCsvModal]=useState(false);
@@ -2406,107 +2502,7 @@ function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,t
         <button className={`proj-tab-btn${innerTab==='analytics'?' active':''}`} onClick={()=>setInnerTab('analytics')}>📊 Аналітика</button>
       </div>
 
-      {innerTab==='analytics'&&(()=>{
-        const today=new Date();today.setHours(0,0,0,0);
-        const start=project.startDate?new Date(project.startDate+'T00:00:00'):null;
-        const end=project.finalDate?new Date(project.finalDate+'T00:00:00'):null;
-        const totalDays=start&&end?Math.round((end-start)/86400000):null;
-        const elapsed=start?Math.max(0,Math.round((today-start)/86400000)):null;
-        const left=end?Math.max(0,Math.round((end-today)/86400000)):null;
-
-        const stages=project.stages.filter(s=>s.type!=='deadline');
-        const totalPlan=stages.reduce((a,s)=>a+parseFloat(s.estHours||0),0);
-        const totalFact=stages.reduce((a,s)=>a+parseFloat(s.manualRealHours||0),0);
-        const togglH=togglProjData?.totalH||0;
-        const factH=togglH||totalFact;
-        const delta=totalPlan>0&&factH>0?factH-totalPlan:null;
-
-        const doneStages=stages.filter(s=>s.done);
-        const maxPlan=Math.max(...stages.map(s=>parseFloat(s.estHours||0)),1);
-        const maxFact=Math.max(...stages.map(s=>parseFloat(s.manualRealHours||0)),1);
-        const maxH=Math.max(maxPlan,maxFact,1);
-
-        return(
-          <div className="proj-analytics">
-            {/* Час */}
-            <div className="pa-row">
-              {start&&<div className="pa-chip">
-                <div className="pa-chip-val">{start.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})}</div>
-                <div className="pa-chip-lbl">Початок</div>
-              </div>}
-              {end&&<div className="pa-chip">
-                <div className="pa-chip-val" style={{color:left===0?'#ff5555':left<=3?'#ff8c42':'var(--amber)'}}>{end.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})}</div>
-                <div className="pa-chip-lbl">Дедлайн</div>
-              </div>}
-              {totalDays!==null&&<div className="pa-chip">
-                <div className="pa-chip-val">{totalDays}</div>
-                <div className="pa-chip-lbl">Всього днів</div>
-              </div>}
-              {elapsed!==null&&<div className="pa-chip">
-                <div className="pa-chip-val">{elapsed}</div>
-                <div className="pa-chip-lbl">Минуло</div>
-              </div>}
-              {left!==null&&<div className="pa-chip" style={{borderColor:left<=3?'rgba(255,85,85,.25)':'rgba(245,230,200,.08)'}}>
-                <div className="pa-chip-val" style={{color:left===0?'#ff5555':left<=3?'#ff8c42':left<=7?'var(--amber)':'#5dbb7e'}}>{left}</div>
-                <div className="pa-chip-lbl">Залишилось</div>
-              </div>}
-            </div>
-
-            {/* Прогрес */}
-            <div className="pa-row">
-              <div className="pa-chip">
-                <div className="pa-chip-val">{progress}%</div>
-                <div className="pa-chip-lbl">Прогрес</div>
-              </div>
-              <div className="pa-chip">
-                <div className="pa-chip-val">{doneStages.length}/{stages.length}</div>
-                <div className="pa-chip-lbl">Вех виконано</div>
-              </div>
-              {totalPlan>0&&<div className="pa-chip">
-                <div className="pa-chip-val">{fmtTogglH(totalPlan)}</div>
-                <div className="pa-chip-lbl">Планований час</div>
-              </div>}
-              {factH>0&&<div className="pa-chip" style={{borderColor:'rgba(93,187,126,.2)'}}>
-                <div className="pa-chip-val" style={{color:'#5dbb7e'}}>{fmtTogglH(factH)}</div>
-                <div className="pa-chip-lbl">{togglH?'Toggl факт':'Ручний факт'}</div>
-              </div>}
-              {delta!==null&&<div className="pa-chip" style={{borderColor:delta>0?'rgba(255,85,85,.2)':'rgba(93,187,126,.2)'}}>
-                <div className="pa-chip-val" style={{color:delta>0?'#ff8a80':'#5dbb7e'}}>
-                  {delta>0?'+':'-'}{fmtTogglH(Math.abs(delta))}
-                </div>
-                <div className="pa-chip-lbl">{delta>0?'Понад план':'Зекономлено'}</div>
-              </div>}
-            </div>
-
-            {/* По вехах */}
-            {stages.some(s=>s.estHours||s.manualRealHours)&&(
-              <div>
-                <div className="pa-section-title">Час по вехах</div>
-                {stages.filter(s=>s.estHours||s.manualRealHours).map(s=>{
-                  const pH=parseFloat(s.estHours||0);
-                  const fH=parseFloat(s.manualRealHours||0);
-                  return(
-                    <div key={s.id} className="pa-stage-row">
-                      <span style={{fontSize:'.7rem',color:s.done?'#5dbb7e':'rgba(245,230,200,.3)',flexShrink:0}}>{s.done?'✓':'○'}</span>
-                      <span className="pa-stage-name">{s.name}</span>
-                      {pH>0&&<span style={{fontSize:'.68rem',color:'rgba(232,160,32,.6)',flexShrink:0}}>{fmtTogglH(pH)}</span>}
-                      {fH>0&&<>
-                        <div className="pa-bar-wrap">
-                          <div className="pa-bar-fill" style={{
-                            width:(Math.min(fH,pH>0?pH:fH)/maxH*100)+'%',
-                            background:fH>pH&&pH>0?'linear-gradient(90deg,#ff5555,#c0392b)':'linear-gradient(90deg,#5dbb7e,#27ae60)'
-                          }}/>
-                        </div>
-                        <span style={{fontSize:'.68rem',color:fH>pH&&pH>0?'#ff8a80':'#5dbb7e',flexShrink:0,minWidth:36,textAlign:'right'}}>{fmtTogglH(fH)}</span>
-                      </>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {innerTab==='analytics'&&<ProjectAnalytics project={project} togglProjData={togglProjData}/>}
 
       {innerTab==='stages'&&<div className="project-body-inner">
         <div className="stages-col">
