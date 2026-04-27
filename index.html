@@ -481,7 +481,14 @@ input[type="date"]{color-scheme:dark}
 .mini-empty{text-align:center;padding:3rem 1rem;color:rgba(245,230,200,.25)}
 .mini-empty .e-lion{font-size:3rem;margin-bottom:.8rem;opacity:.35}
 /* TOGGL */
-.tbadge-toggl{background:rgba(147,108,230,.15);color:#b39ddb;border:1px solid rgba(147,108,230,.28)!important}
+.tbadge-linked{background:rgba(93,187,126,.12);color:#5dbb7e;border:1px solid rgba(93,187,126,.28)!important;cursor:pointer}
+.tbadge-linked:hover{background:rgba(93,187,126,.22)}
+.break-modal-overlay{position:fixed;inset:0;background:rgba(8,5,2,.88);display:flex;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(5px);padding:1rem;animation:fadeOv .15s ease}
+.break-modal-card{background:#1a1005;border:1px solid rgba(93,187,126,.3);border-radius:22px;padding:1.6rem 1.8rem;max-width:480px;width:100%;animation:popUp .2s ease;box-shadow:0 20px 60px rgba(0,0,0,.75)}
+.break-modal-card h3{font-family:'Playfair Display',serif;color:#5dbb7e;font-size:1.1rem;margin-bottom:.3rem}
+.break-modal-stage{font-size:.82rem;color:rgba(245,230,200,.4);margin-bottom:1.2rem;font-style:italic}
+.break-step-row{display:flex;gap:.4rem;align-items:center;margin-bottom:.4rem}
+.break-step-num{font-size:.72rem;font-weight:900;color:rgba(93,187,126,.4);width:18px;flex-shrink:0;text-align:right}
 .tbadge-manual{background:rgba(93,187,126,.12);color:#5dbb7e;border:1px solid rgba(93,187,126,.25)!important}
 .tbadge-delta-pos{background:rgba(93,187,126,.1);color:#5dbb7e;border:1px solid rgba(93,187,126,.2)!important}
 .tbadge-delta-neg{background:rgba(192,57,43,.1);color:#ff8a80;border:1px solid rgba(192,57,43,.25)!important}
@@ -2407,13 +2414,14 @@ function ProjectAnalytics({project, togglProjData}){
   );
 }
 
-function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,tags,onAddTag,onProjDragStart,onProjDragOver,onProjDragEnd,isDragging,isDragOver,onNewImage,onPickImage,customImage,onPuzzlePlace,onPuzzlePlaceAll,allProjects,togglProjData}){
+function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,tags,onAddTag,onBreakIntoSteps,miniProjects,onProjDragStart,onProjDragOver,onProjDragEnd,isDragging,isDragOver,onNewImage,onPickImage,customImage,onPuzzlePlace,onPuzzlePlaceAll,allProjects,togglProjData}){
   const [collapsed,setCollapsed]=useState(true);
   const [showCsvModal,setShowCsvModal]=useState(false);
   const [editingTimeId,setEditingTimeId]=useState(null);
   const [timeInputVal,setTimeInputVal]=useState('');
   const [editingTagId,setEditingTagId]=useState(null);
-  const [innerTab,setInnerTab]=useState('stages'); // 'stages' | 'analytics'
+  const [innerTab,setInnerTab]=useState('stages');
+  const [breakStage,setBreakStage]=useState(null); // 'stages' | 'analytics'
   const level=projLevel(project.stages);
   const progress=projProgress(project.stages);
   const daysLeft=project.finalDate?daysUntil(project.finalDate):null;
@@ -2658,6 +2666,22 @@ function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,t
                           </span>
                         );
                       })()}
+                      {/* Розбити на кроки */}
+                      {stage.type!=='deadline'&&!stage.done&&onBreakIntoSteps&&(()=>{
+                        const linked=(miniProjects||[]).find(m=>m.linkedStageId===stage.id);
+                        return linked
+                          ? <span className="tbadge tbadge-linked"
+                              onClick={e=>{e.stopPropagation();onBreakIntoSteps(project.id,stage,null);}}>
+                              ⚡ є кроки
+                            </span>
+                          : <button onClick={e=>{e.stopPropagation();setBreakStage(stage);}}
+                              title="Розбити на мікрокроки"
+                              style={{background:'none',border:'1px solid rgba(93,187,126,.2)',borderRadius:6,
+                                color:'rgba(93,187,126,.45)',fontSize:'.65rem',padding:'.1rem .4rem',
+                                cursor:'pointer',fontFamily:'Nunito,sans-serif',lineHeight:1.4,flexShrink:0,whiteSpace:'nowrap'}}>
+                              🔀 розбити
+                            </button>;
+                      })()}
                       {/* Кнопка ручного введення */}
                       {stage.type!=='deadline'&&onUpdateStage&&(
                         editingTimeId===stage.id ? (
@@ -2768,6 +2792,11 @@ function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,t
     onAddTag={onAddTag}
     onSelect={tagId=>{onUpdateStage(project.id,editingTagId,{tagId});setEditingTagId(null);}}
     onClose={()=>setEditingTagId(null)}
+  />}
+  {breakStage&&<BreakIntoStepsModal
+    stage={breakStage}
+    onClose={()=>setBreakStage(null)}
+    onSave={steps=>{onBreakIntoSteps(project.id,breakStage,steps);setBreakStage(null);}}
   />}
   </>);
 }
@@ -2939,7 +2968,7 @@ function MiniProjectForm({existing, onSave, onCancel}){
 }
 
 function MiniProjectCard({mp, onToggle, onEdit, onDelete, onArchive, onPostpone, onPuzzlePlace, onNewImage, onPickImage, customImage, onUpdateTask, tags, onAddTag}){
-  const [collapsed,setCollapsed]=useState(true);
+  const [collapsed,setCollapsed]=useState(!mp.linkedStageId); // розгорнути якщо щойно створено з вехи
   const [editingTimeId,setEditingTimeId]=useState(null);
   const [timeInputVal,setTimeInputVal]=useState('');
   const [editingTagId,setEditingTagId]=useState(null);
@@ -3248,6 +3277,77 @@ function MiniProjectsTab({miniProjects,miniArchive,bankImages,tags,onAddTag,onSa
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── BREAK INTO STEPS MODAL ───────────────────────────────────
+function BreakIntoStepsModal({stage, onSave, onClose}){
+  const [steps,setSteps]=useState([
+    {id:Date.now(),name:'',estHours:''},
+    {id:Date.now()+1,name:'',estHours:''},
+  ]);
+
+  function updateStep(id,upd){setSteps(s=>s.map(x=>x.id===id?{...x,...upd}:x));}
+  function addStep(){setSteps(s=>[...s,{id:Date.now(),name:'',estHours:''}]);}
+  function removeStep(id){if(steps.length>1)setSteps(s=>s.filter(x=>x.id!==id));}
+
+  function handleSave(){
+    const valid=steps.filter(s=>s.name.trim());
+    if(!valid.length){alert('Додай хоча б один крок');return;}
+    onSave(valid.map(s=>({...s,done:false})));
+  }
+
+  const totalH=steps.reduce((a,s)=>a+(parseFloat(s.estHours)||0),0);
+
+  return(
+    <div className="break-modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="break-modal-card">
+        <h3>🔀 Розбити на мікрокроки</h3>
+        <div className="break-modal-stage">📋 {stage.name}</div>
+
+        <div style={{background:'rgba(93,187,126,.06)',border:'1px solid rgba(93,187,126,.15)',borderRadius:12,padding:'.8rem 1rem',marginBottom:'1.2rem',fontSize:'.82rem',color:'rgba(245,230,200,.55)',lineHeight:1.6}}>
+          Не можу зробити одразу? Розбий на маленькі зрозумілі кроки — і перший крок стане очевидним 🧩
+        </div>
+
+        <div style={{marginBottom:'.8rem'}}>
+          {steps.map((s,i)=>(
+            <div key={s.id} className="break-step-row">
+              <span className="break-step-num">{i+1}.</span>
+              <input type="text" value={s.name}
+                placeholder={`Крок ${i+1}...`}
+                onChange={e=>updateStep(s.id,{name:e.target.value})}
+                onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addStep();}}}
+                style={{flex:1,fontSize:'.88rem',padding:'.42rem .7rem',background:'rgba(245,230,200,.05)',
+                  border:'1px solid rgba(93,187,126,.2)',borderRadius:8,color:'var(--dust)',
+                  fontFamily:'Nunito,sans-serif',outline:'none'}}
+                autoFocus={i===0}/>
+              <div className="time-col" title="Час на крок">
+                <input className="time-inp" type="number" min="0.25" max="8" step="0.25"
+                  placeholder="год" value={s.estHours||''}
+                  onChange={e=>updateStep(s.id,{estHours:e.target.value})}
+                  style={{width:52}}/>
+                <div className="time-lbl">год</div>
+              </div>
+              {steps.length>1&&<button onClick={()=>removeStep(s.id)}
+                style={{background:'none',border:'none',color:'rgba(245,230,200,.2)',cursor:'pointer',fontSize:'1rem',padding:'0 .2rem',lineHeight:1}}>✕</button>}
+            </div>
+          ))}
+          <button className="btn-add-stage" onClick={addStep} style={{marginTop:'.3rem'}}>+ Додати крок</button>
+        </div>
+
+        {totalH>0&&<div style={{fontSize:'.78rem',color:'rgba(93,187,126,.6)',marginBottom:'1rem',paddingLeft:'.3rem'}}>
+          ⏱ Всього: {fmtTogglH(totalH)}
+        </div>}
+
+        <div className="form-actions">
+          <button className="btn-secondary" onClick={onClose}>Скасувати</button>
+          <button className="btn-primary" onClick={handleSave}
+            style={{background:'linear-gradient(135deg,#5dbb7e,#27ae60)',boxShadow:'0 4px 18px rgba(39,174,96,.35)',padding:'.6rem 1.5rem'}}>
+            ⚡ Зберегти кроки
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -3788,6 +3888,32 @@ function App(){
     const n=miniProjects.filter(x=>x.id!==id);
     setMiniProjects(n);saveMini(n);
   }
+  function handleBreakIntoSteps(projectId, stage, steps){
+    const existing=miniProjects.find(m=>m.linkedStageId===stage.id);
+    if(existing||!steps){ setActiveTab('mini'); return; }
+    const id=Date.now();
+    const n=steps.length;
+    const imgs=bankImages;
+    const imageId=imgs.length>0?imgs[Math.floor(Math.random()*imgs.length)].id:null;
+    const mp={
+      id,
+      name:stage.name,
+      startDate:null,
+      durationDays:1,
+      tasks:steps.map((s,i)=>({id:id+i+1,...s,done:false})),
+      linkedStageId:stage.id,
+      linkedProjectId:projectId,
+      createdAt:new Date().toISOString(),
+      imageId,
+      shuffleMap:generateShuffleMap(n,hashStr(String(id))),
+      puzzlePlaced:[],
+      wimmelSeed:Math.floor(Math.random()*9999),
+    };
+    const updated=[mp,...miniProjects];
+    setMiniProjects(updated); saveMini(updated);
+    setActiveTab('mini');
+  }
+
   function handleMiniUpdateTask(mpId, taskId, updates){
     const updated=miniProjects.map(mp=>{
       if(mp.id!==mpId)return mp;
@@ -4167,6 +4293,8 @@ function App(){
           onUpdateStage={handleUpdateStage}
           tags={tags}
           onAddTag={handleAddTag}
+          onBreakIntoSteps={handleBreakIntoSteps}
+          miniProjects={miniProjects}
           onProjDragStart={onProjDragStart}
           onProjDragOver={onProjDragOver}
           onProjDragEnd={onProjDragEnd}
