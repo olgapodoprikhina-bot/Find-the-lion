@@ -14,6 +14,56 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="module" id="firebase-init">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDalpQLRHb1Tp-A1ftRjjmhttPBISpgorI",
+    authDomain: "znaydi-leva.firebaseapp.com",
+    projectId: "znaydi-leva",
+    storageBucket: "znaydi-leva.firebasestorage.app",
+    messagingSenderId: "1098776931348",
+    appId: "1:1098776931348:web:fee6a5da72f2b1bff6cb01"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const USER_DOC = 'users/olga';
+
+  // Expose to global scope for use in React app
+  window.__fbDb = db;
+  window.__fbDoc = (path) => doc(db, path);
+  window.__fbSetDoc = setDoc;
+  window.__fbOnSnapshot = onSnapshot;
+  window.__fbGetDoc = getDoc;
+  window.__fbUserDoc = USER_DOC;
+  window.__fbReady = true;
+
+  // Save all data to Firebase
+  window.fbSave = async function(data) {
+    try {
+      await setDoc(doc(db, USER_DOC), data, {merge: true});
+    } catch(e) { console.warn('Firebase save error:', e); }
+  };
+
+  // Subscribe to Firebase changes
+  window.fbSubscribe = function(onChange) {
+    return onSnapshot(doc(db, USER_DOC), (snap) => {
+      if (snap.exists()) onChange(snap.data());
+    });
+  };
+
+  // Initial load from Firebase
+  window.fbLoad = async function() {
+    try {
+      const snap = await getDoc(doc(db, USER_DOC));
+      return snap.exists() ? snap.data() : null;
+    } catch(e) { console.warn('Firebase load error:', e); return null; }
+  };
+
+  console.log('Firebase ready ✓');
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 :root{
@@ -588,6 +638,17 @@ const LS_MINI='znaydi_leva_mini_v1';
 const LS_MINI_ARCHIVE='znaydi_leva_mini_archive';
 const LS_TAGS='znaydi_leva_tags';
 
+// Firebase-aware save: saves to localStorage AND Firebase
+async function fbSyncSave(key, data){
+  try{localStorage.setItem(key,JSON.stringify(data));}catch{}
+  if(window.fbSave){
+    const payload={};
+    payload[key]=JSON.stringify(data);
+    payload['_updatedAt']=Date.now();
+    window.fbSave(payload);
+  }
+}
+
 const DEFAULT_TAGS=[
   {id:'t1', label:'Ескіз / дизайн',    emoji:'🎨'},
   {id:'t2', label:'Конструювання',      emoji:'📐'},
@@ -602,11 +663,11 @@ const DEFAULT_TAGS=[
 ];
 
 function loadTags(){try{const d=localStorage.getItem(LS_TAGS);return d?JSON.parse(d):DEFAULT_TAGS;}catch{return DEFAULT_TAGS;}}
-function saveTags(d){try{localStorage.setItem(LS_TAGS,JSON.stringify(d));}catch{}}
-function loadMini(){try{return JSON.parse(localStorage.getItem(LS_MINI))||[];}catch{return[]}}
-function saveMini(d){try{localStorage.setItem(LS_MINI,JSON.stringify(d));}catch{}}
+function saveTags(d){fbSyncSave(LS_TAGS,d);}
+function loadMini(){try{return JSON.parse(localStorage.getItem(LS_MINI))||[];}catch{return[];}}
+function saveMini(d){fbSyncSave(LS_MINI,d);}
 function loadMiniArchive(){try{return JSON.parse(localStorage.getItem(LS_MINI_ARCHIVE))||[];}catch{return[];}}
-function saveMiniArchive(d){try{localStorage.setItem(LS_MINI_ARCHIVE,JSON.stringify(d));}catch{}}
+function saveMiniArchive(d){fbSyncSave(LS_MINI_ARCHIVE,d);}
 
 function loadTogglCfg(){try{return JSON.parse(localStorage.getItem(LS_TOGGL))||{};}catch{return{};}}
 function saveTogglCfg(d){try{localStorage.setItem(LS_TOGGL,JSON.stringify(d));}catch{}}
@@ -691,12 +752,9 @@ async function runTogglSync(projects, token){
   return result;
 }
 function load(){try{return JSON.parse(localStorage.getItem(LS_KEY))||[];}catch{return[];}}
-function save(d){
-  try{localStorage.setItem(LS_KEY,JSON.stringify(d));return true;}
-  catch(e){console.warn('save projects failed',e);return false;}
-}
+function save(d){fbSyncSave(LS_KEY,d);}
 function loadArchive(){try{return JSON.parse(localStorage.getItem(LS_ARCHIVE))||[];}catch{return[];}}
-function saveArchive(d){try{localStorage.setItem(LS_ARCHIVE,JSON.stringify(d));}catch{}}
+function saveArchive(d){fbSyncSave(LS_ARCHIVE,d);}
 
 // ─── IndexedDB for images (localStorage is too small for photos) ───
 const IDB_NAME='znaydi_leva_idb', IDB_VER=1, IDB_STORE='bank_images';
@@ -3935,6 +3993,49 @@ function App(){
     setMiniProjects(updated);saveMini(updated);
   }
 
+  // Firebase: load on mount + subscribe to remote changes
+  useEffect(()=>{
+    let unsubscribe=null;
+    async function initFirebase(){
+      if(!window.fbLoad)return;
+      // Load from Firebase on first open
+      const fbData=await window.fbLoad();
+      if(fbData&&fbData['_updatedAt']){
+        const lsTime=parseInt(localStorage.getItem('_fb_last_sync')||'0');
+        if(fbData['_updatedAt']>lsTime){
+          // Firebase is newer — apply to state and localStorage
+          const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS];
+          keys.forEach(k=>{if(fbData[k]){try{localStorage.setItem(k,fbData[k]);}catch{}}});
+          localStorage.setItem('_fb_last_sync',String(fbData['_updatedAt']));
+          // Update React state
+          try{const p=JSON.parse(fbData[LS_KEY]);if(p)setProjects(p);}catch{}
+          try{const a=JSON.parse(fbData[LS_ARCHIVE]);if(a)setArchive(a);}catch{}
+          try{const m=JSON.parse(fbData[LS_MINI]);if(m)setMiniProjects(m);}catch{}
+          try{const ma=JSON.parse(fbData[LS_MINI_ARCHIVE]);if(ma)setMiniArchive(ma);}catch{}
+          try{const t=JSON.parse(fbData[LS_TAGS]);if(t)setTags(t);}catch{}
+        }
+      }
+      // Subscribe to real-time changes
+      if(window.fbSubscribe){
+        unsubscribe=window.fbSubscribe(data=>{
+          const lsTime=parseInt(localStorage.getItem('_fb_last_sync')||'0');
+          if(!data['_updatedAt']||data['_updatedAt']<=lsTime)return;
+          localStorage.setItem('_fb_last_sync',String(data['_updatedAt']));
+          const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS];
+          keys.forEach(k=>{if(data[k]){try{localStorage.setItem(k,data[k]);}catch{}}});
+          try{const p=JSON.parse(data[LS_KEY]);if(p)setProjects(p);}catch{}
+          try{const a=JSON.parse(data[LS_ARCHIVE]);if(a)setArchive(a);}catch{}
+          try{const m=JSON.parse(data[LS_MINI]);if(m)setMiniProjects(m);}catch{}
+          try{const ma=JSON.parse(data[LS_MINI_ARCHIVE]);if(ma)setMiniArchive(ma);}catch{}
+          try{const t=JSON.parse(data[LS_TAGS]);if(t)setTags(t);}catch{}
+        });
+      }
+    }
+    // Wait for Firebase to init (it's a module script)
+    const check=setInterval(()=>{if(window.fbLoad){clearInterval(check);initFirebase();}},200);
+    setTimeout(()=>clearInterval(check),5000);
+    return()=>{if(unsubscribe)unsubscribe();};
+  },[]);
   // Auto-sync on mount if token exists and data is older than 5 min
   useEffect(()=>{
     const cfg=loadTogglCfg();
