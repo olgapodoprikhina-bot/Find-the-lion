@@ -3080,12 +3080,12 @@ function MiniProjectCard({mp, onToggle, onEdit, onDelete, onArchive, onPostpone,
         <div className="mini-progress-fill" style={{width:pct+'%'}}/>
       </div>
 
-      {perDay>0&&(
+      {(perDay>0||totalFact>0)&&(
         <div className="mini-hours-summary">
-          {!allDone&&<span className={`mini-hour-chip${perDay>5?' over':perDay>3?' warn':''}`}>
+          {!allDone&&totalHLeft>0&&<span className={`mini-hour-chip${perDay>5?' over':perDay>3?' warn':''}`}>
             ⏱ Залишилось: {fmtH(totalHLeft)}
           </span>}
-          <span className="mini-hour-chip" style={{opacity:.6}}>~{fmtH(perDay)}/день</span>
+          {totalPlan>0&&<span className="mini-hour-chip" style={{opacity:.6}}>~{fmtH(totalPlan)} план</span>}
           {totalFact>0&&<span className="mini-hour-chip" style={{background:'rgba(93,187,126,.12)',borderColor:'rgba(93,187,126,.3)',color:'#5dbb7e'}}>
             ✍️ факт: {fmtTogglH(totalFact)}
             {totalPlan>0&&<span style={{marginLeft:'.35rem',color:totalFact>totalPlan?'#ff8a80':'#5dbb7e',fontWeight:900}}>
