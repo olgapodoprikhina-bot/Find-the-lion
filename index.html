@@ -637,15 +637,17 @@ const LS_TOGGL='znaydi_leva_toggl', LS_TOGGL_DATA='znaydi_leva_toggl_data';
 const LS_MINI='znaydi_leva_mini_v1';
 const LS_MINI_ARCHIVE='znaydi_leva_mini_archive';
 const LS_TAGS='znaydi_leva_tags';
+const LS_PERSONAL='znaydi_leva_personal';
+const LS_PERSONAL_ARCHIVE='znaydi_leva_personal_archive';
 
 // Firebase-aware save: saves to localStorage AND Firebase
-async function fbSyncSave(key, data){
+function fbSyncSave(key, data){
   try{localStorage.setItem(key,JSON.stringify(data));}catch{}
   if(window.fbSave){
     const payload={};
     payload[key]=JSON.stringify(data);
     payload['_updatedAt']=Date.now();
-    window.fbSave(payload);
+    window.fbSave(payload); // async but fire-and-forget
   }
 }
 
@@ -668,6 +670,10 @@ function loadMini(){try{return JSON.parse(localStorage.getItem(LS_MINI))||[];}ca
 function saveMini(d){fbSyncSave(LS_MINI,d);}
 function loadMiniArchive(){try{return JSON.parse(localStorage.getItem(LS_MINI_ARCHIVE))||[];}catch{return[];}}
 function saveMiniArchive(d){fbSyncSave(LS_MINI_ARCHIVE,d);}
+function loadPersonal(){try{return JSON.parse(localStorage.getItem(LS_PERSONAL))||[];}catch{return[];}}
+function savePersonal(d){fbSyncSave(LS_PERSONAL,d);}
+function loadPersonalArchive(){try{return JSON.parse(localStorage.getItem(LS_PERSONAL_ARCHIVE))||[];}catch{return[];}}
+function savePersonalArchive(d){fbSyncSave(LS_PERSONAL_ARCHIVE,d);}
 
 function loadTogglCfg(){try{return JSON.parse(localStorage.getItem(LS_TOGGL))||{};}catch{return{};}}
 function saveTogglCfg(d){try{localStorage.setItem(LS_TOGGL,JSON.stringify(d));}catch{}}
@@ -1682,7 +1688,7 @@ function ProjectForm({existing,onSave,onCancel,isOverlay,allProjects}){
     })()}
 
     <div className="form-group" style={{marginBottom:'1rem'}}>
-      <label>Нотатки (необов'язково)</label>
+      <label>Нотатки (необов&#39;язково)</label>
       <textarea placeholder="клієнт, деталі, посилання..." value={notes} onChange={e=>setNotes(e.target.value)}/>
     </div>
 
@@ -2043,7 +2049,7 @@ function PuzzleBoard({leaves,calendarLeaves,projectId,size=195,preview=false,wim
 
   if(total===0)return(
     <div className="puzzle-panel">
-      <div className="puzzle-empty">🦁<br/>Додай вехи —<br/>лев розіб'ється<br/>на частини</div>
+      <div className="puzzle-empty">🦁<br/>Додай вехи —<br/>лев розіб&#39;ється<br/>на частини</div>
       <MiniCalendar leaves={calendarLeaves||[]} finalDate={finalDate} preview={preview} allProjects={allProjects} currentProjectId={currentProjectId}/>
       {!preview&&<PracticeCard compact/>}
     </div>
@@ -3587,6 +3593,143 @@ function AnalyticsTab({projects, miniProjects, tags}){
   );
 }
 
+// ─── PERSONAL TAB ─────────────────────────────────────────────
+function PersonalTab({projects,archive,bankImages,tags,onAddTag,onSave,onToggle,onArchive,onArchiveDelete,onArchiveRestore,onDelete,onUpdateStage,onPuzzlePlace,onPuzzlePlaceAll,onNewImage,onPickImage,onAddBankImage,onBreakIntoSteps,miniProjects}){
+  const [showForm,setShowForm]=useState(false);
+  const [editProject,setEditProject]=useState(null);
+  const [showArchive,setShowArchive]=useState(false);
+  const [pickProjectId,setPickProjectId]=useState(null);
+  const [showBank,setShowBank]=useState(false);
+  const [deleteId,setDeleteId]=useState(null);
+  const dragProjId=useRef(null);
+  const [dragOverId,setDragOverId]=useState(null);
+
+  function onProjDragStart(e,id){dragProjId.current=id;e.dataTransfer.effectAllowed='move';}
+  function onProjDragOver(e,id){
+    e.preventDefault();
+    if(dragProjId.current===id)return;
+    setDragOverId(id);
+  }
+  function onProjDragEnd(){dragProjId.current=null;setDragOverId(null);}
+
+  function openPickMode(projectId){setPickProjectId(projectId);setShowBank(true);}
+
+  function handlePickImage(imgId){
+    if(!pickProjectId)return;
+    onPickImage(pickProjectId,imgId);
+    setShowBank(false);setPickProjectId(null);
+  }
+
+  return(
+    <div>
+      <div style={{display:'flex',gap:'.6rem',marginBottom:'1.2rem',flexWrap:'wrap'}}>
+        <button className="btn-primary" onClick={()=>{setEditProject(null);setShowForm(true);}}
+          style={{flex:1,borderRadius:14,fontSize:'1rem',
+            background:'linear-gradient(135deg,#5dbb7e,#27ae60)',boxShadow:'0 4px 20px rgba(39,174,96,.25)'}}>
+          🌱 Новий особистий проект
+        </button>
+        {archive.length>0&&<button className="btn-ghost" onClick={()=>setShowArchive(true)}
+          style={{fontSize:'.82rem',color:'rgba(200,160,80,.8)',borderColor:'rgba(200,160,80,.25)'}}>
+          📦 Архів ({archive.length})
+        </button>}
+      </div>
+
+      {showForm&&<ProjectForm
+        onSave={p=>{onSave(p);setShowForm(false);setEditProject(null);}}
+        onCancel={()=>{setShowForm(false);setEditProject(null);}}
+        allProjects={projects}
+        existing={editProject}
+      />}
+
+      {!projects.length&&!showForm&&(
+        <div className="mini-empty">
+          <div className="e-lion">🌱</div>
+          <p style={{fontSize:'.9rem',lineHeight:1.7}}>
+            Особистих проектів ще немає.<br/>
+            <span style={{fontSize:'.8rem'}}>Навчання, здоров&#39;я, хобі — все що не робота.</span>
+          </p>
+        </div>
+      )}
+
+      <div className="projects-grid">
+        {projects.map(p=>(
+          <ProjectCard key={p.id} project={p}
+            onToggle={onToggle}
+            onDelete={setDeleteId}
+            onArchive={onArchive}
+            onEdit={proj=>{setEditProject(proj);setShowForm(true);}}
+            onUpdateStage={onUpdateStage}
+            tags={tags}
+            onAddTag={onAddTag}
+            onBreakIntoSteps={onBreakIntoSteps}
+            miniProjects={miniProjects}
+            onProjDragStart={onProjDragStart}
+            onProjDragOver={onProjDragOver}
+            onProjDragEnd={onProjDragEnd}
+            isDragging={dragProjId.current===p.id}
+            isDragOver={dragOverId===p.id&&dragProjId.current!==p.id}
+            onNewImage={()=>onNewImage(p.id)}
+            onPickImage={openPickMode}
+            onPuzzlePlace={onPuzzlePlace}
+            onPuzzlePlaceAll={onPuzzlePlaceAll}
+            customImage={p.imageId?bankImages.find(i=>i.id===p.imageId)?.data||null:null}
+            allProjects={projects}
+            togglProjData={null}
+          />
+        ))}
+      </div>
+
+      {deleteId&&<DeleteConfirm
+        name={projects.find(p=>p.id===deleteId)?.name||''}
+        onConfirm={()=>{onDelete(deleteId);setDeleteId(null);}}
+        onCancel={()=>setDeleteId(null)}
+      />}
+
+      {showArchive&&<div className="arch-modal" onClick={e=>e.target===e.currentTarget&&setShowArchive(false)}>
+        <div className="arch-card">
+          <h2>📦 Архів особистих проектів</h2>
+          <div className="arch-subtitle">Завершені або відкладені особисті проекти.</div>
+          {archive.length===0
+            ?<div className="arch-empty">Архів порожній.</div>
+            :<div className="arch-list">
+              {archive.map(p=>(
+                <div key={p.id} className="arch-item">
+                  <div className="arch-item-info">
+                    <div className="arch-item-name">{p.name}</div>
+                    <div className="arch-item-meta">
+                      {p.finalDate&&<span>📅 {fmtDate(p.finalDate)}</span>}
+                      {p.archivedAt&&<span>В архіві з {new Date(p.archivedAt).toLocaleDateString('uk-UA',{day:'numeric',month:'short',year:'numeric'})}</span>}
+                    </div>
+                  </div>
+                  <div className="arch-item-actions">
+                    <button className="btn-ghost" style={{fontSize:'.75rem'}} onClick={()=>onArchiveRestore(p.id)}>↩ Відновити</button>
+                    <button className="btn-icon" style={{color:'rgba(255,85,85,.5)',borderColor:'rgba(255,85,85,.2)'}}
+                      onClick={()=>{if(confirm(`Видалити «${p.name}» назавжди?`))onArchiveDelete(p.id);}}>🗑</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          }
+          <div className="arch-footer">
+            <span style={{fontSize:'.74rem',color:'rgba(245,230,200,.3)'}}>В архіві: {archive.length}</span>
+            <button className="btn-secondary" onClick={()=>setShowArchive(false)}>Закрити</button>
+          </div>
+        </div>
+      </div>}
+
+      {showBank&&<ImageBankModal
+        bankImages={bankImages}
+        onClose={()=>{setShowBank(false);setPickProjectId(null);}}
+        onAddImage={onAddBankImage}
+        onDeleteImage={()=>{}}
+        pickMode={true}
+        currentImageId={pickProjectId?projects.find(p=>p.id===pickProjectId)?.imageId||null:null}
+        onPick={handlePickImage}
+      />}
+    </div>
+  );
+}
+
 // ─── TOGGL MODAL ──────────────────────────────────────────────
 function TogglModal({projects, togglData, onClose, onSynced}){
   const [token,setToken]=useState(()=>loadTogglCfg().token||'');
@@ -3874,7 +4017,109 @@ function App(){
   const [activeTab,setActiveTab]=useState('projects');
   const [miniProjects,setMiniProjects]=useState(loadMini);
   const [miniArchive,setMiniArchive]=useState(loadMiniArchive);
+  const [personalProjects,setPersonalProjects]=useState(loadPersonal);
+  const [personalArchive,setPersonalArchive]=useState(loadPersonalArchive);
   const [tags,setTags]=useState(loadTags);
+
+  // ── Personal project handlers (mirror of main project handlers) ──
+  function handlePersonalSave(project){
+    const leaves=getLeaves(project.stages);
+    const n=leaves.length;
+    const existing=personalProjects.find(p=>p.id===project.id);
+    const needNewMap=!project.shuffleMap||project.shuffleMap.length!==n;
+    if(needNewMap&&existing&&(existing.puzzlePlaced||[]).length>0){
+      if(!confirm('Кількість вех змінилась — пазл скинеться. Продовжити?'))return;
+    }
+    const shuffleMap=needNewMap?generateShuffleMap(n,hashStr(String(project.id))):project.shuffleMap;
+    const puzzlePlaced=needNewMap?[]:(project.puzzlePlaced||[]);
+    const donePrev=existing?(existing.puzzlePlaced||[]):[];
+    const updProject={...project,shuffleMap,puzzlePlaced:needNewMap?donePrev.filter(i=>i<n):puzzlePlaced};
+    const updated=existing?personalProjects.map(p=>p.id===updProject.id?updProject:p):[updProject,...personalProjects];
+    setPersonalProjects(updated);savePersonal(updated);
+  }
+  function handlePersonalToggle(projectId,stageId,subOrFrom,reorderTo){
+    setPersonalProjects(prev=>{
+      const updated=prev.map(p=>{
+        if(p.id!==projectId)return p;
+        if(stageId==='__reorder__'){
+          const fr=p.stages.findIndex(s=>s.id===subOrFrom);
+          const to=p.stages.findIndex(s=>s.id===reorderTo);
+          if(fr<0||to<0||fr===to)return p;
+          const n=[...p.stages];n.splice(to,0,n.splice(fr,1)[0]);
+          return{...p,stages:n};
+        }
+        const stages=p.stages.map(s=>s.id===stageId?{...s,done:!s.done}:s);
+        const leaves=getLeaves(stages);
+        const allDone=leaves.length>0&&leaves.every(l=>l.done);
+        if(allDone)spawnConfetti();
+        return{...p,stages};
+      });
+      savePersonal(updated);return updated;
+    });
+  }
+  function handlePersonalUpdateStage(projectId,stageId,updates){
+    setPersonalProjects(prev=>{
+      const updated=prev.map(p=>{
+        if(p.id!==projectId)return p;
+        return{...p,stages:p.stages.map(s=>s.id===stageId?{...s,...updates}:s)};
+      });
+      savePersonal(updated);return updated;
+    });
+  }
+  function handlePersonalArchive(projectId){
+    const p=personalProjects.find(x=>x.id===projectId);
+    if(!p)return;
+    const newArch=[{...p,archivedAt:new Date().toISOString()},...personalArchive];
+    const newProjs=personalProjects.filter(x=>x.id!==projectId);
+    setPersonalArchive(newArch);savePersonalArchive(newArch);
+    setPersonalProjects(newProjs);savePersonal(newProjs);
+  }
+  function handlePersonalArchiveDelete(id){
+    const n=personalArchive.filter(x=>x.id!==id);
+    setPersonalArchive(n);savePersonalArchive(n);
+  }
+  function handlePersonalArchiveRestore(id){
+    const p=personalArchive.find(x=>x.id===id);
+    if(!p)return;
+    const{archivedAt,...restored}=p;
+    setPersonalProjects(prev=>{const n=[restored,...prev];savePersonal(n);return n;});
+    setPersonalArchive(prev=>{const n=prev.filter(x=>x.id!==id);savePersonalArchive(n);return n;});
+  }
+  function handlePersonalDelete(id){
+    const n=personalProjects.filter(x=>x.id!==id);
+    setPersonalProjects(n);savePersonal(n);
+  }
+  function handlePersonalPuzzlePlace(projectId,trayIdx){
+    setPersonalProjects(prev=>{
+      const updated=prev.map(p=>{
+        if(p.id!==projectId)return p;
+        return{...p,puzzlePlaced:[...(p.puzzlePlaced||[]),trayIdx]};
+      });
+      savePersonal(updated);return updated;
+    });
+  }
+  function handlePersonalPuzzlePlaceAll(projectId){
+    setPersonalProjects(prev=>{
+      const updated=prev.map(p=>{
+        if(p.id!==projectId)return p;
+        const doneIdxs=getLeaves(p.stages).map((l,i)=>l.done?i:-1).filter(x=>x>=0);
+        return{...p,puzzlePlaced:doneIdxs};
+      });
+      savePersonal(updated);return updated;
+    });
+  }
+  function handlePersonalNewImage(projectId){
+    setPersonalProjects(prev=>{
+      const updated=prev.map(p=>p.id===projectId?{...p,wimmelSeed:((p.wimmelSeed||0)+1)}:p);
+      savePersonal(updated);return updated;
+    });
+  }
+  function handlePersonalPickImage(projectId,imgId){
+    setPersonalProjects(prev=>{
+      const updated=prev.map(p=>p.id===projectId?{...p,imageId:imgId||null}:p);
+      savePersonal(updated);return updated;
+    });
+  }
 
   function handleAddTag(tag){
     const updated=[...tags,tag];
@@ -4004,7 +4249,7 @@ function App(){
         const lsTime=parseInt(localStorage.getItem('_fb_last_sync')||'0');
         if(fbData['_updatedAt']>lsTime){
           // Firebase is newer — apply to state and localStorage
-          const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS];
+          const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS,LS_PERSONAL,LS_PERSONAL_ARCHIVE];
           keys.forEach(k=>{if(fbData[k]){try{localStorage.setItem(k,fbData[k]);}catch{}}});
           localStorage.setItem('_fb_last_sync',String(fbData['_updatedAt']));
           // Update React state
@@ -4013,6 +4258,8 @@ function App(){
           try{const m=JSON.parse(fbData[LS_MINI]);if(m)setMiniProjects(m);}catch{}
           try{const ma=JSON.parse(fbData[LS_MINI_ARCHIVE]);if(ma)setMiniArchive(ma);}catch{}
           try{const t=JSON.parse(fbData[LS_TAGS]);if(t)setTags(t);}catch{}
+          try{const pp=JSON.parse(fbData[LS_PERSONAL]);if(pp)setPersonalProjects(pp);}catch{}
+          try{const pa=JSON.parse(fbData[LS_PERSONAL_ARCHIVE]);if(pa)setPersonalArchive(pa);}catch{}
         }
       }
       // Subscribe to real-time changes
@@ -4021,13 +4268,15 @@ function App(){
           const lsTime=parseInt(localStorage.getItem('_fb_last_sync')||'0');
           if(!data['_updatedAt']||data['_updatedAt']<=lsTime)return;
           localStorage.setItem('_fb_last_sync',String(data['_updatedAt']));
-          const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS];
+          const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS,LS_PERSONAL,LS_PERSONAL_ARCHIVE];
           keys.forEach(k=>{if(data[k]){try{localStorage.setItem(k,data[k]);}catch{}}});
           try{const p=JSON.parse(data[LS_KEY]);if(p)setProjects(p);}catch{}
           try{const a=JSON.parse(data[LS_ARCHIVE]);if(a)setArchive(a);}catch{}
           try{const m=JSON.parse(data[LS_MINI]);if(m)setMiniProjects(m);}catch{}
           try{const ma=JSON.parse(data[LS_MINI_ARCHIVE]);if(ma)setMiniArchive(ma);}catch{}
           try{const t=JSON.parse(data[LS_TAGS]);if(t)setTags(t);}catch{}
+          try{const pp=JSON.parse(data[LS_PERSONAL]);if(pp)setPersonalProjects(pp);}catch{}
+          try{const pa=JSON.parse(data[LS_PERSONAL_ARCHIVE]);if(pa)setPersonalArchive(pa);}catch{}
         });
       }
     }
@@ -4318,9 +4567,13 @@ function App(){
     <div className="tab-switcher">
       <button className={`tab-btn${activeTab==='projects'?' active':''}`} onClick={()=>setActiveTab('projects')}>
         🦁 Проекти
-        {totalP>0&&<span className={`tab-badge${dangerP>0?' ':''}${dangerP>0?'':''}`}
+        {totalP>0&&<span className={`tab-badge`}
           style={{background:dangerP>0?'rgba(255,85,85,.2)':'rgba(232,160,32,.18)',
             color:dangerP>0?'#ff8a80':'var(--amber)'}}>{totalP}</span>}
+      </button>
+      <button className={`tab-btn${activeTab==='personal'?' active':''}`} onClick={()=>setActiveTab('personal')}>
+        🌱 Особисте
+        {personalProjects.length>0&&<span className="tab-badge" style={{background:'rgba(93,187,126,.18)',color:'#5dbb7e'}}>{personalProjects.length}</span>}
       </button>
       <button className={`tab-btn${activeTab==='mini'?' active':''}`} onClick={()=>setActiveTab('mini')}>
         ⚡ Міні
@@ -4331,7 +4584,29 @@ function App(){
       </button>
     </div>
 
-    {activeTab==='analytics'&&<AnalyticsTab projects={projects} miniProjects={miniProjects} tags={tags}/>}
+    {activeTab==='analytics'&&<AnalyticsTab projects={[...projects,...personalProjects]} miniProjects={miniProjects} tags={tags}/>}
+
+    {activeTab==='personal'&&<PersonalTab
+      projects={personalProjects}
+      archive={personalArchive}
+      bankImages={bankImages}
+      tags={tags}
+      onAddTag={handleAddTag}
+      onSave={handlePersonalSave}
+      onToggle={handlePersonalToggle}
+      onArchive={handlePersonalArchive}
+      onArchiveDelete={handlePersonalArchiveDelete}
+      onArchiveRestore={handlePersonalArchiveRestore}
+      onDelete={handlePersonalDelete}
+      onUpdateStage={handlePersonalUpdateStage}
+      onPuzzlePlace={handlePersonalPuzzlePlace}
+      onPuzzlePlaceAll={handlePersonalPuzzlePlaceAll}
+      onNewImage={handlePersonalNewImage}
+      onPickImage={handlePersonalPickImage}
+      onAddBankImage={handleAddBankImage}
+      onBreakIntoSteps={handleBreakIntoSteps}
+      miniProjects={miniProjects}
+    />}
 
     {activeTab==='mini'&&<MiniProjectsTab
       miniProjects={miniProjects}
