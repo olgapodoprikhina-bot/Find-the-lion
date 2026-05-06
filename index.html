@@ -3672,7 +3672,7 @@ function PersonalTab({projects,archive,bankImages,tags,onAddTag,onSave,onToggle,
             onPickImage={openPickMode}
             onPuzzlePlace={onPuzzlePlace}
             onPuzzlePlaceAll={onPuzzlePlaceAll}
-            customImage={p.imageId?bankImages.find(i=>i.id===p.imageId)?.data||null:null}
+            customImage={p.imageId?bankImages.find(i=>String(i.id)===String(p.imageId))?.data||null:null}
             allProjects={projects}
             togglProjData={null}
           />
