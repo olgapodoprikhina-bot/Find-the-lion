@@ -4033,7 +4033,9 @@ function App(){
     const shuffleMap=needNewMap?generateShuffleMap(n,hashStr(String(project.id))):project.shuffleMap;
     const puzzlePlaced=needNewMap?[]:(project.puzzlePlaced||[]);
     const donePrev=existing?(existing.puzzlePlaced||[]):[];
-    const updProject={...project,shuffleMap,puzzlePlaced:needNewMap?donePrev.filter(i=>i<n):puzzlePlaced};
+    // Auto-assign random image from bank if none selected
+    const imageId=project.imageId||(bankImages.length>0?bankImages[Math.floor(Math.random()*bankImages.length)].id:null);
+    const updProject={...project,imageId,shuffleMap,puzzlePlaced:needNewMap?donePrev.filter(i=>i<n):puzzlePlaced,wimmelSeed:project.wimmelSeed||Math.floor(Math.random()*9999)};
     const updated=existing?personalProjects.map(p=>p.id===updProject.id?updProject:p):[updProject,...personalProjects];
     setPersonalProjects(updated);savePersonal(updated);
   }
@@ -4066,6 +4068,18 @@ function App(){
       savePersonal(updated);return updated;
     });
   }
+  // Auto-assign images to personal projects that don't have one yet
+  useEffect(()=>{
+    if(!bankImages.length||!personalProjects.length)return;
+    const needsImage=personalProjects.filter(p=>!p.imageId);
+    if(!needsImage.length)return;
+    const updated=personalProjects.map(p=>{
+      if(p.imageId)return p;
+      const img=bankImages[Math.floor(Math.random()*bankImages.length)];
+      return{...p,imageId:img.id};
+    });
+    setPersonalProjects(updated);savePersonal(updated);
+  },[bankImages]);
   function handlePersonalArchive(projectId){
     const p=personalProjects.find(x=>x.id===projectId);
     if(!p)return;
