@@ -533,6 +533,9 @@ input[type="date"]{color-scheme:dark}
 /* TOGGL */
 .tbadge-linked{background:rgba(93,187,126,.12);color:#5dbb7e;border:1px solid rgba(93,187,126,.28)!important;cursor:pointer}
 .tbadge-linked:hover{background:rgba(93,187,126,.22)}
+.tbadge-todoist{background:rgba(219,68,55,.08);color:#e57373;border:1px solid rgba(219,68,55,.2)!important;cursor:pointer;transition:all .15s}
+.tbadge-todoist:hover{background:rgba(219,68,55,.18)}
+.tbadge-todoist.synced{background:rgba(219,68,55,.18);color:#ef5350;border-color:rgba(219,68,55,.45)!important}
 .break-modal-overlay{position:fixed;inset:0;background:rgba(8,5,2,.88);display:flex;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(5px);padding:1rem;animation:fadeOv .15s ease}
 .break-modal-card{background:#1a1005;border:1px solid rgba(93,187,126,.3);border-radius:22px;padding:1.6rem 1.8rem;max-width:480px;width:100%;animation:popUp .2s ease;box-shadow:0 20px 60px rgba(0,0,0,.75)}
 .break-modal-card h3{font-family:'Playfair Display',serif;color:#5dbb7e;font-size:1.1rem;margin-bottom:.3rem}
@@ -2522,6 +2525,14 @@ function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,t
             {project.finalDate&&<span style={{color:daysColor}}>📅 {fmtDate(project.finalDate)}{daysLabel?` · ${daysLabel}`:''}</span>}
             {leaves.length>0&&<span className="project-meta-tag">{leaves.filter(l=>l.done).length}/{leaves.length} кроків</span>}
             {warns.length>0&&<span style={{color:'#ff8a80',fontSize:'.7rem'}}>⚠️ {warns.length} несост.</span>}
+            {project.todoistSynced&&<span
+              onClick={e=>{e.stopPropagation();onUpdateStage&&onUpdateStage(project.id,'__todoist__',{todoistSynced:false});}}
+              title="Клік щоб скинути"
+              style={{display:'inline-flex',alignItems:'center',gap:'.25rem',fontSize:'.68rem',fontWeight:800,
+                color:'#ef5350',background:'rgba(219,68,55,.12)',border:'1px solid rgba(219,68,55,.3)',
+                borderRadius:6,padding:'.1rem .45rem',cursor:'pointer'}}>
+              ✓ в Todoist
+            </span>}
           </div>
         </div>
       </div>
@@ -2563,6 +2574,12 @@ function ProjectCard({project,onToggle,onDelete,onArchive,onEdit,onUpdateStage,t
           <button className="btn-icon" onClick={e=>{e.stopPropagation();setShowCsvModal(true);}}
             title="Експорт у CSV для імпорту в Todoist"
             style={{color:'rgba(93,187,126,.65)',borderColor:'rgba(93,187,126,.2)'}}>📋</button>
+          <button className="btn-icon"
+            onClick={e=>{e.stopPropagation();onUpdateStage&&onUpdateStage(project.id,'__todoist__',{todoistSynced:!project.todoistSynced});}}
+            title={project.todoistSynced?'Скинути мітку Todoist':'Позначити як перенесено в Todoist'}
+            style={{color:project.todoistSynced?'#ef5350':'rgba(219,68,55,.3)',borderColor:project.todoistSynced?'rgba(219,68,55,.4)':'rgba(219,68,55,.12)',fontSize:'.6rem',fontWeight:900,padding:'0 .35rem'}}>
+            TD
+          </button>
           <button className="btn-icon" onClick={e=>{e.stopPropagation();onArchive(project.id);}} title="В архів"
             style={{color:'rgba(200,160,80,.65)',borderColor:'rgba(200,160,80,.2)'}}>📦</button>
           <button className="btn-icon" onClick={e=>{e.stopPropagation();onEdit(project);}} title="Редагувати"
@@ -4060,6 +4077,9 @@ function App(){
     });
   }
   function handlePersonalUpdateStage(projectId,stageId,updates){
+    if(stageId==='__todoist__'){
+      setPersonalProjects(prev=>{const u=prev.map(p=>p.id===projectId?{...p,...updates}:p);savePersonal(u);return u;});return;
+    }
     setPersonalProjects(prev=>{
       const updated=prev.map(p=>{
         if(p.id!==projectId)return p;
@@ -4377,6 +4397,10 @@ function App(){
   }
 
   function handleUpdateStage(projectId, stageId, updates){
+    if(stageId==='__todoist__'){
+      const updated=projects.map(p=>p.id===projectId?{...p,...updates}:p);
+      setProjects(updated);save(updated);return;
+    }
     const updated=projects.map(p=>{
       if(p.id!==projectId)return p;
       const stages=p.stages.map(s=>s.id===stageId?{...s,...updates}:s);
