@@ -14,10 +14,9 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script type="module" id="firebase-init">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
   const firebaseConfig = {
     apiKey: "AIzaSyDalpQLRHb1Tp-A1ftRjjmhttPBISpgorI",
     authDomain: "znaydi-leva.firebaseapp.com",
@@ -26,42 +25,25 @@
     messagingSenderId: "1098776931348",
     appId: "1:1098776931348:web:fee6a5da72f2b1bff6cb01"
   };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
   const USER_DOC = 'users/olga';
 
-  // Expose to global scope for use in React app
-  window.__fbDb = db;
-  window.__fbDoc = (path) => doc(db, path);
-  window.__fbSetDoc = setDoc;
-  window.__fbOnSnapshot = onSnapshot;
-  window.__fbGetDoc = getDoc;
-  window.__fbUserDoc = USER_DOC;
-  window.__fbReady = true;
-
-  // Save all data to Firebase
   window.fbSave = async function(data) {
-    try {
-      await setDoc(doc(db, USER_DOC), data, {merge: true});
-    } catch(e) { console.warn('Firebase save error:', e); }
+    try { await db.doc(USER_DOC).set(data, {merge: true}); }
+    catch(e) { console.warn('Firebase save error:', e); }
   };
-
-  // Subscribe to Firebase changes
   window.fbSubscribe = function(onChange) {
-    return onSnapshot(doc(db, USER_DOC), (snap) => {
-      if (snap.exists()) onChange(snap.data());
+    return db.doc(USER_DOC).onSnapshot(snap => {
+      if (snap.exists) onChange(snap.data());
     });
   };
-
-  // Initial load from Firebase
   window.fbLoad = async function() {
     try {
-      const snap = await getDoc(doc(db, USER_DOC));
-      return snap.exists() ? snap.data() : null;
+      const snap = await db.doc(USER_DOC).get();
+      return snap.exists ? snap.data() : null;
     } catch(e) { console.warn('Firebase load error:', e); return null; }
   };
-
   console.log('Firebase ready ✓');
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
