@@ -14,38 +14,6 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDalpQLRHb1Tp-A1ftRjjmhttPBISpgorI",
-    authDomain: "znaydi-leva.firebaseapp.com",
-    projectId: "znaydi-leva",
-    storageBucket: "znaydi-leva.firebasestorage.app",
-    messagingSenderId: "1098776931348",
-    appId: "1:1098776931348:web:fee6a5da72f2b1bff6cb01"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const USER_DOC = 'users/olga';
-
-  window.fbSave = async function(data) {
-    try { await db.doc(USER_DOC).set(data, {merge: true}); }
-    catch(e) { console.warn('Firebase save error:', e); }
-  };
-  window.fbSubscribe = function(onChange) {
-    return db.doc(USER_DOC).onSnapshot(snap => {
-      if (snap.exists) onChange(snap.data());
-    });
-  };
-  window.fbLoad = async function() {
-    try {
-      const snap = await db.doc(USER_DOC).get();
-      return snap.exists ? snap.data() : null;
-    } catch(e) { console.warn('Firebase load error:', e); return null; }
-  };
-  console.log('Firebase ready ✓');
-</script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 :root{
@@ -625,15 +593,9 @@ const LS_TAGS='znaydi_leva_tags';
 const LS_PERSONAL='znaydi_leva_personal';
 const LS_PERSONAL_ARCHIVE='znaydi_leva_personal_archive';
 
-// Firebase-aware save: saves to localStorage AND Firebase
+// Simple localStorage save (Firebase removed - was causing Babel conflicts)
 function fbSyncSave(key, data){
   try{localStorage.setItem(key,JSON.stringify(data));}catch{}
-  if(window.fbSave){
-    const payload={};
-    payload[key]=JSON.stringify(data);
-    payload['_updatedAt']=Date.now();
-    window.fbSave(payload); // async but fire-and-forget
-  }
 }
 
 const DEFAULT_TAGS=[
@@ -4254,53 +4216,6 @@ function App(){
     setMiniProjects(updated);saveMini(updated);
   }
 
-  // Firebase: load on mount + subscribe to remote changes
-  useEffect(()=>{
-    let unsubscribe=null;
-    async function initFirebase(){
-      if(!window.fbLoad)return;
-      // Load from Firebase on first open
-      const fbData=await window.fbLoad();
-      if(fbData&&fbData['_updatedAt']){
-        const lsTime=parseInt(localStorage.getItem('_fb_last_sync')||'0');
-        if(fbData['_updatedAt']>lsTime){
-          // Firebase is newer — apply to state and localStorage
-          const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS,LS_PERSONAL,LS_PERSONAL_ARCHIVE];
-          keys.forEach(k=>{if(fbData[k]){try{localStorage.setItem(k,fbData[k]);}catch{}}});
-          localStorage.setItem('_fb_last_sync',String(fbData['_updatedAt']));
-          // Update React state
-          try{const p=JSON.parse(fbData[LS_KEY]);if(p)setProjects(p);}catch{}
-          try{const a=JSON.parse(fbData[LS_ARCHIVE]);if(a)setArchive(a);}catch{}
-          try{const m=JSON.parse(fbData[LS_MINI]);if(m)setMiniProjects(m);}catch{}
-          try{const ma=JSON.parse(fbData[LS_MINI_ARCHIVE]);if(ma)setMiniArchive(ma);}catch{}
-          try{const t=JSON.parse(fbData[LS_TAGS]);if(t)setTags(t);}catch{}
-          try{const pp=JSON.parse(fbData[LS_PERSONAL]);if(pp)setPersonalProjects(pp);}catch{}
-          try{const pa=JSON.parse(fbData[LS_PERSONAL_ARCHIVE]);if(pa)setPersonalArchive(pa);}catch{}
-        }
-      }
-      // Subscribe to real-time changes
-      if(window.fbSubscribe){
-        unsubscribe=window.fbSubscribe(data=>{
-          const lsTime=parseInt(localStorage.getItem('_fb_last_sync')||'0');
-          if(!data['_updatedAt']||data['_updatedAt']<=lsTime)return;
-          localStorage.setItem('_fb_last_sync',String(data['_updatedAt']));
-          const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS,LS_PERSONAL,LS_PERSONAL_ARCHIVE];
-          keys.forEach(k=>{if(data[k]){try{localStorage.setItem(k,data[k]);}catch{}}});
-          try{const p=JSON.parse(data[LS_KEY]);if(p)setProjects(p);}catch{}
-          try{const a=JSON.parse(data[LS_ARCHIVE]);if(a)setArchive(a);}catch{}
-          try{const m=JSON.parse(data[LS_MINI]);if(m)setMiniProjects(m);}catch{}
-          try{const ma=JSON.parse(data[LS_MINI_ARCHIVE]);if(ma)setMiniArchive(ma);}catch{}
-          try{const t=JSON.parse(data[LS_TAGS]);if(t)setTags(t);}catch{}
-          try{const pp=JSON.parse(data[LS_PERSONAL]);if(pp)setPersonalProjects(pp);}catch{}
-          try{const pa=JSON.parse(data[LS_PERSONAL_ARCHIVE]);if(pa)setPersonalArchive(pa);}catch{}
-        });
-      }
-    }
-    // Wait for Firebase to init (it's a module script)
-    const check=setInterval(()=>{if(window.fbLoad){clearInterval(check);initFirebase();}},200);
-    setTimeout(()=>clearInterval(check),5000);
-    return()=>{if(unsubscribe)unsubscribe();};
-  },[]);
   // Auto-sync on mount if token exists and data is older than 5 min
   useEffect(()=>{
     const cfg=loadTogglCfg();
