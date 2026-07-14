@@ -367,7 +367,13 @@ input[type="date"]{color-scheme:dark}
 
 /* ── STRUCTURED MILESTONES FORM ── */
 .ms-block{display:flex;flex-direction:column;gap:.55rem;margin-bottom:1rem}
-.ms-card{border-radius:14px;overflow:hidden;transition:box-shadow .2s}
+.ms-card{border-radius:14px;overflow:hidden;transition:box-shadow .2s,opacity .2s}
+.ms-card.ms-done{opacity:.5}
+.ms-check{width:22px;height:22px;border-radius:50%;border:2px solid rgba(232,160,32,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;cursor:pointer;background:rgba(245,230,200,.03)}
+.ms-check:hover{border-color:rgba(232,160,32,.6)}
+.ms-card.ms-done .ms-check{background:var(--amber);border-color:var(--amber)}
+.ms-check-inner{font-size:.65rem;color:var(--savanna);font-weight:900}
+.ms-card.ms-done .ms-goal-inp{text-decoration:line-through;color:rgba(245,230,200,.35)}
 .ms-card.type-deadline{border:1px solid rgba(232,160,32,.45);background:rgba(232,160,32,.07)}
 .ms-card.type-two_days{border:1px solid rgba(212,90,26,.4);background:rgba(212,90,26,.06)}
 .ms-card.type-one_week{border:1px solid rgba(211,84,0,.35);background:rgba(211,84,0,.05)}
@@ -1256,9 +1262,13 @@ function MilestoneCard({ s, idx, finalDate, createdAt, onUpdate, onDelete, canDe
   const conflicts = React.useMemo(() => getDayLoad(effDate, allProjects, currentProjectId), [effDate, allProjects, currentProjectId]);
 
   return (
-    <div className={`ms-card ${mt.color}`}>
+    <div className={`ms-card ${mt.color}${s.done?' ms-done':''}`}>
       <div className="ms-header">
         <span className="ms-drag-handle" onMouseDown={e=>e.stopPropagation()}>⠿</span>
+        <div className="ms-check" title={s.done?'Позначити як невиконане':'Позначити як виконане'}
+          onClick={()=>onUpdate({...s, done:!s.done})}>
+          {s.done&&<span className="ms-check-inner">✓</span>}
+        </div>
         <span className={`ms-badge ${mt.color}`}>{mt.icon} {mt.label}</span>
         {mt.q && <span className="ms-question">{mt.q.replace('\n',' ')}</span>}
         {structured && (
