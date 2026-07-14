@@ -641,7 +641,7 @@ input[type="date"]{color-scheme:dark}
 <body><div id="root"></div>
 <script type="text/babel">
 const { useState, useMemo, useRef, useEffect } = React;
-const LS_KEY='znaydi_leva_v3', LS_SEEN='znaydi_leva_seen3', LS_ARCHIVE='znaydi_leva_archive';
+const LS_KEY='znaydi_leva_projects_v4', LS_KEY_LEGACY='znaydi_leva_v3', LS_SEEN='znaydi_leva_seen3', LS_ARCHIVE='znaydi_leva_archive';
 const LS_TOGGL='znaydi_leva_toggl', LS_TOGGL_DATA='znaydi_leva_toggl_data';
 const LS_MINI='znaydi_leva_mini_v1';
 const LS_MINI_ARCHIVE='znaydi_leva_mini_archive';
@@ -766,7 +766,16 @@ async function runTogglSync(projects, token){
   }
   return result;
 }
-function load(){try{return JSON.parse(localStorage.getItem(LS_KEY))||[];}catch{return[];}}
+function load(){
+  try{const p=JSON.parse(localStorage.getItem(LS_KEY));if(Array.isArray(p))return p;}catch{}
+  // Одноразовая миграция: старый ключ мог быть перезаписан другим приложением (Odyssey),
+  // поэтому берём его, только если это реально похоже на массив наших проектов.
+  try{
+    const legacy=JSON.parse(localStorage.getItem(LS_KEY_LEGACY));
+    if(Array.isArray(legacy))return legacy;
+  }catch{}
+  return [];
+}
 function save(d){fbSyncSave(LS_KEY,d);}
 function loadArchive(){try{return JSON.parse(localStorage.getItem(LS_ARCHIVE))||[];}catch{return[];}}
 function saveArchive(d){fbSyncSave(LS_ARCHIVE,d);}
@@ -4297,7 +4306,16 @@ function App(){
           keys.forEach(k=>{if(fbData[k]){try{localStorage.setItem(k,fbData[k]);}catch{}}});
           localStorage.setItem('_fb_last_sync',String(fbData['_updatedAt']));
           // Update React state
-          try{const p=JSON.parse(fbData[LS_KEY]);if(p)setProjects(p);}catch{}
+          try{
+            let p=JSON.parse(fbData[LS_KEY]);
+            if(!Array.isArray(p)){
+              // Новое поле ещё пустое — одноразово мигрируем из старого общего поля,
+              // если там реально массив наших проектов (а не данные другого приложения).
+              const legacy=JSON.parse(fbData[LS_KEY_LEGACY]);
+              if(Array.isArray(legacy)){p=legacy;save(p);}
+            }
+            if(Array.isArray(p))setProjects(p);
+          }catch{}
           try{const a=JSON.parse(fbData[LS_ARCHIVE]);if(a)setArchive(a);}catch{}
           try{const m=JSON.parse(fbData[LS_MINI]);if(m)setMiniProjects(m);}catch{}
           try{const ma=JSON.parse(fbData[LS_MINI_ARCHIVE]);if(ma)setMiniArchive(ma);}catch{}
@@ -4314,7 +4332,14 @@ function App(){
           localStorage.setItem('_fb_last_sync',String(data['_updatedAt']));
           const keys=[LS_KEY,LS_ARCHIVE,LS_MINI,LS_MINI_ARCHIVE,LS_TAGS,LS_PERSONAL,LS_PERSONAL_ARCHIVE];
           keys.forEach(k=>{if(data[k]){try{localStorage.setItem(k,data[k]);}catch{}}});
-          try{const p=JSON.parse(data[LS_KEY]);if(p)setProjects(p);}catch{}
+          try{
+            let p=JSON.parse(data[LS_KEY]);
+            if(!Array.isArray(p)){
+              const legacy=JSON.parse(data[LS_KEY_LEGACY]);
+              if(Array.isArray(legacy)){p=legacy;save(p);}
+            }
+            if(Array.isArray(p))setProjects(p);
+          }catch{}
           try{const a=JSON.parse(data[LS_ARCHIVE]);if(a)setArchive(a);}catch{}
           try{const m=JSON.parse(data[LS_MINI]);if(m)setMiniProjects(m);}catch{}
           try{const ma=JSON.parse(data[LS_MINI_ARCHIVE]);if(ma)setMiniArchive(ma);}catch{}
