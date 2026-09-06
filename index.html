@@ -4547,7 +4547,7 @@ function App(){
   function openPickMode(projectId){setPickProjectId(projectId);setShowBank(true);}
 
   const totalP=projects.length;
-  const doneP=projects.filter(p=>projLevel(p.stages)==='done').length;
+  const doneP=projects.filter(p=>projLevel(p.stages)==='done').length+archive.filter(p=>projLevel(p.stages)==='done').length;
   const dangerP=projects.filter(p=>projLevel(p.stages)==='danger').length;
   const totalL=projects.reduce((a,p)=>a+getLeaves(p.stages).length,0);
   const doneL=projects.reduce((a,p)=>a+getLeaves(p.stages).filter(l=>l.done).length,0);
