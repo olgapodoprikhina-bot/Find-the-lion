@@ -651,6 +651,7 @@ const LS_PERSONAL_ARCHIVE='znaydi_leva_personal_archive';
 
 // Firebase-aware save: saves to localStorage AND Firebase
 function fbSyncSave(key, data){
+  if(key===LS_KEY||key===LS_MINI)window.__lionSrcUpdated=Date.now(); // для lion_snapshot: час останньої правки проєктів/міні
   try{localStorage.setItem(key,JSON.stringify(data));}catch{}
   if(window.fbSave){
     const payload={};
@@ -4026,6 +4027,384 @@ function TodayModal({projects, miniProjects, onClose, onToggle, onMiniToggle}){
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ☁ GOOGLE DRIVE SNAPSHOT — тільки читання з Лева, запис у lion_snapshot_v1.json
+// Нічого в Firebase / Todoist / проєктах не змінює.
+// ═══════════════════════════════════════════════════════════════
+const LION_DRIVE_FILE='lion_snapshot_v1.json';
+const LION_DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file';
+const LION_DRIVE_CFG_KEY='znaydi_leva_drive_cfg'; // тільки localStorage, у Firebase НЕ пишеться
+const LION_DRIVE_CLIENT_ID=''; // за бажанням можна вписати сюди; інакше вводиться у вікні
+const LION_DRIVE_DEBOUNCE=20000;      // чекаємо 20 с після останньої правки
+const LION_DRIVE_MIN_INTERVAL=60000;  // не частіше 1 запису на хвилину
+
+function lionNum(v){const n=parseFloat(v);return isNaN(n)?null:n;}
+
+// Та сама логіка дати віхи, що й у застосунку: збережена date → dateOverride → авто-розрахунок
+function lionEffDate(s,proj){
+  let d=s.date||'';
+  if(!d&&isStructured(s.type)){
+    d=s.dateOverride||'';
+    if(!d){try{d=msAutoDate(s.type,proj.finalDate,proj.startDate||proj.createdAt)||'';}catch(e){d='';}}
+  }
+  return d||null;
+}
+
+function lionSourceUpdated(){
+  const a=window.__lionSrcUpdated||0;
+  const b=parseInt(localStorage.getItem('_fb_last_sync')||'0')||0;
+  const m=Math.max(a,b);
+  return m?new Date(m).toISOString():null;
+}
+
+// Білий список полів: що не перелічено тут — у файл не потрапляє (картинки, пазли, нотатки, токени)
+function lionBuildSnapshot(projects,minis,archive){
+  const archivedIds=new Set((archive||[]).map(p=>String(p.id)));
+  const outProjects=(projects||[]).map(p=>({
+    id:p.id,
+    name:(p.name||'').trim(),
+    startDate:p.startDate||null,
+    finalDate:p.finalDate||null,
+    milestones:(p.stages||[])
+      .filter(s=>(s.name&&s.name.trim())||s.type==='deadline')
+      .map(s=>({
+        id:s.id,
+        name:(s.name||'').trim(),
+        date:lionEffDate(s,p),
+        type:s.type||'custom',
+        done:!!s.done,
+        estHours:s.type==='deadline'?null:lionNum(s.estHours)
+      }))
+  }));
+  const stageOwner={};
+  outProjects.forEach(p=>p.milestones.forEach(m=>{stageOwner[String(m.id)]=p.id;}));
+  const outMini=(minis||[]).map(mp=>{
+    const hasS=mp.linkedStageId!=null, hasP=mp.linkedProjectId!=null;
+    let status='unlinked';
+    if(hasS||hasP){
+      const proj=hasP?outProjects.find(p=>String(p.id)===String(mp.linkedProjectId)):null;
+      if(hasP&&!proj) status=archivedIds.has(String(mp.linkedProjectId))?'project_archived':'project_missing';
+      else if(hasS){
+        if(proj) status=proj.milestones.some(m=>String(m.id)===String(mp.linkedStageId))?'linked':'stage_missing';
+        else status=stageOwner[String(mp.linkedStageId)]!=null?'linked_stage_only':'stage_missing';
+      } else status='project_only';
+    }
+    return {
+      id:mp.id,
+      name:(mp.name||'').trim(),
+      startDate:mp.startDate||null,
+      durationDays:lionNum(mp.durationDays),
+      linkedStageId:mp.linkedStageId!=null?mp.linkedStageId:null,
+      linkedProjectId:mp.linkedProjectId!=null?mp.linkedProjectId:null,
+      linkStatus:status,
+      tasks:(mp.tasks||[]).map((t,i)=>({
+        id:t.id,
+        order:i+1,
+        name:(t.name||'').trim(),
+        done:!!t.done,
+        estHours:lionNum(t.estHours)
+      }))
+    };
+  });
+  return {
+    schemaVersion:1,
+    app:'znaydi-leva',
+    generatedAt:new Date().toISOString(),
+    sourceUpdatedAt:lionSourceUpdated(),
+    readme:'Read-only snapshot of active projects. Links between mini-projects and milestones are copied as-is (linkedStageId/linkedProjectId); linkStatus only reports whether the link resolves. Task order = order in the list. Archived items are excluded.',
+    units:{estHours:'planned hours as entered; the app plans real time as estHours x 2',dates:'YYYY-MM-DD'},
+    counts:{
+      projects:outProjects.length,
+      milestones:outProjects.reduce((s,p)=>s+p.milestones.length,0),
+      miniProjects:outMini.length,
+      miniTasks:outMini.reduce((s,m)=>s+m.tasks.length,0)
+    },
+    projects:outProjects,
+    miniProjects:outMini
+  };
+}
+
+// Перевірка вмісту на секрети перед вивантаженням
+const LION_SECRET_PATTERNS=[
+  ['Google API key',/AIza[0-9A-Za-z_\-]{30,}/],
+  ['Google OAuth token',/ya29\.[0-9A-Za-z_\-]{10,}/],
+  ['sk- key',/\bsk-[A-Za-z0-9_\-]{20,}/],
+  ['Bearer token',/Bearer\s+[A-Za-z0-9._\-]{20,}/i],
+  ['Private key',/-----BEGIN [A-Z ]*PRIVATE KEY-----/],
+  ['40-hex token',/\b[0-9a-f]{40}\b/i],
+  ['Image data',/data:image\//],
+  ['Long base64',/[A-Za-z0-9+\/=]{120,}/],
+  ['Secret-like field',/\b(password|passwd|api[_-]?key|secret|access[_-]?token|refresh[_-]?token)\b\s*[:=]/i]
+];
+function lionScanSecrets(text){
+  const hits=[];
+  LION_SECRET_PATTERNS.forEach(p=>{if(p[1].test(text))hits.push(p[0]);});
+  return hits;
+}
+function lionHash(str){let h=5381;for(let i=0;i<str.length;i++){h=((h<<5)+h+str.charCodeAt(i))|0;}return String(h);}
+function lionContentHash(snap){
+  return lionHash(JSON.stringify(Object.assign({},snap,{generatedAt:null,sourceUpdatedAt:null})));
+}
+
+const LionDrive=(function(){
+  let cfg={};
+  try{cfg=JSON.parse(localStorage.getItem(LION_DRIVE_CFG_KEY))||{};}catch(e){cfg={};}
+  if(!cfg.clientId&&LION_DRIVE_CLIENT_ID)cfg.clientId=LION_DRIVE_CLIENT_ID;
+  let token=null,tokenExp=0,gisP=null,latest=null,timer=null,lastAttempt=0;
+  let subs=[];
+  let state={status:cfg.fileId?'idle':'disconnected',lastOkAt:cfg.lastOkAt||null,lastError:'',busy:false};
+
+  function saveCfg(){try{localStorage.setItem(LION_DRIVE_CFG_KEY,JSON.stringify(cfg));}catch(e){}}
+  function emit(){subs.slice().forEach(f=>{try{f();}catch(e){}});}
+  function setState(p){state=Object.assign({},state,p);emit();}
+  function tokenValid(){return !!token&&Date.now()<tokenExp-30000;}
+
+  function loadGis(){
+    if(window.google&&google.accounts&&google.accounts.oauth2)return Promise.resolve();
+    if(gisP)return gisP;
+    gisP=new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://accounts.google.com/gsi/client';s.async=true;
+      s.onload=()=>res();
+      s.onerror=()=>{gisP=null;rej(new Error('Не вдалося завантажити Google Sign-In'));};
+      document.head.appendChild(s);
+    });
+    return gisP;
+  }
+  function requestToken(interactive){
+    return loadGis().then(()=>new Promise((res,rej)=>{
+      if(!cfg.clientId){rej(new Error('Не вказано Client ID'));return;}
+      const tc=google.accounts.oauth2.initTokenClient({
+        client_id:cfg.clientId,
+        scope:LION_DRIVE_SCOPE,
+        callback:r=>{
+          if(r.error){rej(new Error(r.error_description||r.error));return;}
+          token=r.access_token;
+          tokenExp=Date.now()+(parseInt(r.expires_in)||3600)*1000;
+          cfg.consented=true;saveCfg();
+          res(token);
+        },
+        error_callback:e=>rej(new Error((e&&e.type)||'auth_error'))
+      });
+      tc.requestAccessToken({prompt:interactive&&!cfg.consented?'consent':''});
+    }));
+  }
+
+  async function dfetch(url,opts){
+    opts=opts||{};
+    opts.headers=Object.assign({},opts.headers||{},{Authorization:'Bearer '+token});
+    const r=await fetch(url,opts);
+    if(r.status===401){token=null;throw new Error('AUTH');}
+    return r;
+  }
+  async function apiErr(r,what){
+    let m='';
+    try{const j=await r.json();m=(j.error&&j.error.message)||'';}catch(e){}
+    return new Error(what+' ('+r.status+')'+(m?': '+m:''));
+  }
+  async function findFile(){
+    const q=encodeURIComponent("name='"+LION_DRIVE_FILE+"' and trashed=false");
+    const r=await dfetch('https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=drive&fields=files(id,name)&orderBy=createdTime');
+    if(!r.ok)throw await apiErr(r,'Пошук файлу');
+    const j=await r.json();
+    return (j.files&&j.files[0]&&j.files[0].id)||null;
+  }
+  async function createFile(json){
+    const b='lion'+Date.now();
+    const body='--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+
+      JSON.stringify({name:LION_DRIVE_FILE,mimeType:'application/json'})+
+      '\r\n--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+json+'\r\n--'+b+'--';
+    const r=await dfetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body:body});
+    if(!r.ok)throw await apiErr(r,'Створення файлу');
+    return (await r.json()).id;
+  }
+  async function updateFile(id,json){
+    const r=await dfetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media&fields=id',
+      {method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:json});
+    if(r.status===404)return false;
+    if(!r.ok)throw await apiErr(r,'Оновлення файлу');
+    return true;
+  }
+  async function ensureShared(id){
+    const r=await dfetch('https://www.googleapis.com/drive/v3/files/'+id+'/permissions',
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'anyone'})});
+    if(!r.ok)throw await apiErr(r,'Налаштування доступу за посиланням');
+    cfg.sharedFileId=id;saveCfg();
+  }
+
+  async function sync(opts){
+    opts=opts||{};
+    if(state.busy)return;
+    if(opts.auto&&state.status==='needs_auth'&&!tokenValid())return;
+    if(!latest){setState({status:'error',lastError:'Дані ще не завантажені'});return;}
+    const snap=lionBuildSnapshot(latest.projects,latest.minis,latest.archive);
+    const hash=lionContentHash(snap);
+    if(opts.auto&&hash===cfg.lastHash)return;
+    const json=JSON.stringify(snap,null,1);
+    const hits=lionScanSecrets(json);
+    if(hits.length){
+      setState({status:'error',lastError:'Вивантаження зупинено: у даних схоже на секрет ('+hits.join(', ')+'). Файл НЕ оновлено.'});
+      return;
+    }
+    if(snap.counts.projects===0&&snap.counts.miniProjects===0&&cfg.lastCounts&&(cfg.lastCounts.projects>0||cfg.lastCounts.miniProjects>0)){
+      if(opts.auto){setState({status:'error',lastError:'Автооновлення пропущено: даних зараз нуль, а в минулому файлі вони були. Натисни «Оновити зараз», якщо так і треба.'});return;}
+      if(!confirm('Зараз у Леві 0 проєктів і 0 міні-проєктів, а в попередньому файлі вони були. Все одно перезаписати файл порожніми даними?'))return;
+    }
+    lastAttempt=Date.now();
+    setState({busy:true,status:'syncing',lastError:''});
+    try{
+      if(!tokenValid())await requestToken(!!opts.interactive);
+      let id=cfg.fileId||null;
+      if(!id)id=await findFile();
+      let written=false;
+      if(id)written=await updateFile(id,json);
+      if(!written){
+        const hadId=!!id;
+        id=await createFile(json);
+        if(hadId)cfg.relinked=true;
+      }
+      cfg.fileId=id;
+      if(cfg.shared&&cfg.sharedFileId!==id)await ensureShared(id);
+      cfg.lastHash=hash;cfg.lastOkAt=new Date().toISOString();cfg.lastCounts=snap.counts;saveCfg();
+      setState({busy:false,status:'ok',lastOkAt:cfg.lastOkAt,lastError:cfg.relinked?'Старий файл не знайдено — створено новий. Посилання змінилося: скопіюй його заново для ChatGPT.':''});
+      cfg.relinked=false;saveCfg();
+    }catch(e){
+      const needAuth=e.message==='AUTH'||/popup|interaction|access_denied|immediate_failed|auth_error|login_required/i.test(e.message);
+      setState({busy:false,status:needAuth?'needs_auth':'error',
+        lastError:needAuth?'Потрібна повторна авторизація Google (токен діє близько години). Натисни «Оновити зараз».':e.message});
+    }
+  }
+
+  function schedule(){
+    if(timer)clearTimeout(timer);
+    const wait=Math.max(LION_DRIVE_DEBOUNCE,LION_DRIVE_MIN_INTERVAL-(Date.now()-lastAttempt));
+    timer=setTimeout(()=>{timer=null;sync({auto:true});},wait);
+  }
+
+  return {
+    subscribe(f){subs.push(f);return()=>{subs=subs.filter(x=>x!==f);};},
+    getState(){return state;},
+    getCfg(){return cfg;},
+    getLink(){return cfg.fileId?'https://drive.google.com/uc?export=download&id='+cfg.fileId:'';},
+    getPreview(){
+      const d=latest||{projects:[],minis:[],archive:[]};
+      const snap=lionBuildSnapshot(d.projects,d.minis,d.archive);
+      const json=JSON.stringify(snap,null,1);
+      return {json:json,counts:snap.counts,issues:lionScanSecrets(json)};
+    },
+    onDataChanged(projects,minis,archive){
+      latest={projects:projects,minis:minis,archive:archive};
+      if(!cfg.fileId)return;
+      const hash=lionContentHash(lionBuildSnapshot(projects,minis,archive));
+      if(hash===cfg.lastHash)return;
+      schedule();
+    },
+    syncNow(){return sync({interactive:true});},
+    async connect(clientId){
+      cfg.clientId=(clientId||cfg.clientId||'').trim();
+      if(!cfg.clientId){setState({status:'error',lastError:'Встав Google Client ID'});return;}
+      saveCfg();
+      try{await requestToken(true);}
+      catch(e){setState({status:'error',lastError:'Авторизація не вдалась: '+e.message});return;}
+      if(!cfg.shared){
+        const ok=confirm('Щоб ChatGPT міг читати файл за постійним посиланням, файл lion_snapshot_v1.json буде доступний усім, хто має це посилання (без входу в Google). У файлі тільки назви проєктів, віх, кроки, дати та години. Продовжити?');
+        if(!ok){setState({status:'error',lastError:'Без доступу за посиланням ChatGPT не зможе читати файл. Підключення не завершено.'});return;}
+        cfg.shared=true;saveCfg();
+      }
+      await sync({interactive:true});
+    },
+    disconnect(){
+      try{if(token&&window.google&&google.accounts&&google.accounts.oauth2)google.accounts.oauth2.revoke(token,()=>{});}catch(e){}
+      token=null;tokenExp=0;
+      cfg={clientId:cfg.clientId};saveCfg();
+      if(timer){clearTimeout(timer);timer=null;}
+      setState({status:'disconnected',lastOkAt:null,lastError:'',busy:false});
+    }
+  };
+})();
+
+function useLionDrive(){
+  const [,force]=useState(0);
+  useEffect(()=>LionDrive.subscribe(()=>force(x=>x+1)),[]);
+  return LionDrive;
+}
+
+function LionDriveModal({onClose}){
+  const d=useLionDrive();
+  const st=d.getState();
+  const cfg=d.getCfg();
+  const [cid,setCid]=useState(cfg.clientId||'');
+  const [copied,setCopied]=useState(false);
+  const [showPrev,setShowPrev]=useState(false);
+  const connected=!!cfg.fileId;
+  const link=d.getLink();
+  const prev=showPrev?d.getPreview():null;
+  const fmt=t=>t?new Date(t).toLocaleString('uk-UA'):'—';
+  const chipColor=st.status==='ok'?'#5dbb7e':(st.status==='error'||st.status==='needs_auth')?'#ff7777':'rgba(245,230,200,.6)';
+  const statusText={disconnected:'Не підключено',idle:'Підключено (чекає оновлення)',syncing:'Записую…',ok:'Файл оновлено',error:'Помилка',needs_auth:'Потрібна авторизація'}[st.status]||st.status;
+  function copyLink(){
+    if(!link)return;
+    const done=()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(link).then(done,()=>{window.prompt('Скопіюй посилання:',link);});}
+    else{window.prompt('Скопіюй посилання:',link);}
+  }
+  const inp={width:'100%',background:'rgba(245,230,200,.06)',border:'1px solid rgba(245,230,200,.2)',borderRadius:10,padding:'.5rem .7rem',color:'var(--dust)',fontSize:'.8rem',fontFamily:'inherit'};
+  return(
+    <div className="toggl-modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="toggl-modal-card">
+        <h3>☁ Google Drive → ChatGPT</h3>
+        <p style={{fontSize:'.78rem',color:'rgba(245,230,200,.55)',margin:'0 0 .8rem',lineHeight:1.5}}>
+          Лев записує безпечну копію активних проєктів, віх і кроків у файл <b>lion_snapshot_v1.json</b> на твоєму Google Drive. Дані в Леві при цьому не змінюються — тільки читання.
+        </p>
+        {!connected&&(
+          <div style={{marginBottom:'.8rem'}}>
+            <div style={{fontSize:'.7rem',fontWeight:800,color:'rgba(245,230,200,.5)',marginBottom:'.3rem'}}>Google OAuth Client ID</div>
+            <input style={inp} value={cid} onChange={e=>setCid(e.target.value)} placeholder="xxxx.apps.googleusercontent.com"/>
+            <div style={{fontSize:'.68rem',color:'rgba(245,230,200,.4)',marginTop:'.3rem',lineHeight:1.45}}>
+              Можна взяти той самий, що в Odyssey, але в Google Cloud → Credentials у «Authorized JavaScript origins» має бути адреса, де відкрито Лева ({window.location.origin}).
+            </div>
+          </div>
+        )}
+        <div style={{display:'flex',flexWrap:'wrap',gap:'.5rem',marginBottom:'.8rem'}}>
+          {!connected&&<button className="btn-ghost" disabled={st.busy} onClick={()=>d.connect(cid)} style={{fontSize:'.82rem',color:'#e8a020',borderColor:'rgba(232,160,32,.45)'}}>🔗 Підключити Google Drive</button>}
+          {connected&&<button className="btn-ghost" disabled={st.busy} onClick={()=>d.syncNow()} style={{fontSize:'.82rem',color:'#e8a020',borderColor:'rgba(232,160,32,.45)'}}>{st.busy?'⏳ Записую…':'🔄 Оновити зараз'}</button>}
+          {connected&&<button className="btn-ghost" onClick={copyLink} style={{fontSize:'.82rem'}}>{copied?'✓ Скопійовано':'📋 Скопіювати посилання'}</button>}
+          {connected&&<button className="btn-ghost" onClick={()=>{if(confirm('Відключити? Файл на Drive залишиться, але оновлюватись перестане.'))d.disconnect();}} style={{fontSize:'.82rem',color:'rgba(245,230,200,.45)'}}>Відключити</button>}
+        </div>
+        <div style={{fontSize:'.78rem',lineHeight:1.7,borderTop:'1px solid rgba(245,230,200,.08)',paddingTop:'.6rem'}}>
+          <div><span style={{color:'rgba(245,230,200,.45)'}}>Стан: </span><b style={{color:chipColor}}>{statusText}</b></div>
+          <div><span style={{color:'rgba(245,230,200,.45)'}}>Остання успішна запис: </span>{fmt(st.lastOkAt)}</div>
+          {st.lastError&&<div style={{color:'#ff9a9a',marginTop:'.3rem'}}>⚠ {st.lastError}</div>}
+        </div>
+        {connected&&(
+          <div style={{marginTop:'.6rem'}}>
+            <div style={{fontSize:'.7rem',fontWeight:800,color:'rgba(245,230,200,.5)',marginBottom:'.3rem'}}>Постійне посилання для ChatGPT</div>
+            <input style={inp} readOnly value={link} onFocus={e=>e.target.select()}/>
+          </div>
+        )}
+        <div style={{fontSize:'.68rem',color:'rgba(245,230,200,.4)',marginTop:'.7rem',lineHeight:1.5}}>
+          Автооновлення працює, лише поки Лев відкритий, і не частіше разу на хвилину. Google-доступ діє близько години — після цього потрібно натиснути «Оновити зараз» (фонової синхронізації немає). Посилання відкрите всім, хто його має, тому нікому його не передавай.
+        </div>
+        <div style={{marginTop:'.6rem'}}>
+          <button className="btn-ghost" onClick={()=>setShowPrev(s=>!s)} style={{fontSize:'.72rem'}}>{showPrev?'Сховати вміст':'👁 Що буде у файлі'}</button>
+          {prev&&(
+            <div style={{marginTop:'.5rem'}}>
+              <div style={{fontSize:'.72rem',color:prev.issues.length?'#ff9a9a':'#5dbb7e',marginBottom:'.3rem'}}>
+                Проєктів: {prev.counts.projects} · Віх: {prev.counts.milestones} · Міні-проєктів: {prev.counts.miniProjects} · Кроків: {prev.counts.miniTasks} · {prev.issues.length?('⚠ схоже на секрет: '+prev.issues.join(', ')):'перевірка на секрети пройдена'}
+              </div>
+              <textarea readOnly value={prev.json} style={Object.assign({},inp,{height:200,fontFamily:'monospace',fontSize:'.66rem'})}/>
+            </div>
+          )}
+        </div>
+        <div style={{textAlign:'right',marginTop:'.8rem'}}>
+          <button className="btn-ghost" onClick={onClose} style={{fontSize:'.8rem'}}>Закрити</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App(){
   const [seen,setSeen]=useState(()=>!!localStorage.getItem(LS_SEEN));
   const [projects,setProjects]=useState(load);
@@ -4049,6 +4428,9 @@ function App(){
   const [showArchive,setShowArchive]=useState(false);
   const [archive,setArchive]=useState(loadArchive);
   const [showToggl,setShowToggl]=useState(false);
+  const [showDrive,setShowDrive]=useState(false);
+  const lionDrive=useLionDrive();
+  useEffect(()=>{LionDrive.onDataChanged(projects,miniProjects,archive);},[projects,miniProjects,archive]);
   const [togglData,setTogglData]=useState(loadTogglData);
   const [activeTab,setActiveTab]=useState('projects');
   const [miniProjects,setMiniProjects]=useState(loadMini);
@@ -4584,6 +4966,12 @@ function App(){
             borderColor:loadTogglCfg().token?'rgba(147,108,230,.35)':'rgba(245,230,200,.15)'}}>
           {loadTogglCfg().token?'⏱ Toggl ✓':'⏱ Toggl'}
         </button>
+        <button className="btn-ghost" onClick={()=>setShowDrive(true)}
+          style={{fontSize:'.82rem',
+            color:lionDrive.getState().status==='ok'?'rgba(93,187,126,.9)':(lionDrive.getState().status==='error'||lionDrive.getState().status==='needs_auth')?'#ff7777':'rgba(245,230,200,.5)',
+            borderColor:lionDrive.getState().status==='ok'?'rgba(93,187,126,.35)':(lionDrive.getState().status==='error'||lionDrive.getState().status==='needs_auth')?'rgba(255,119,119,.4)':'rgba(245,230,200,.15)'}}>
+          {lionDrive.getState().status==='ok'?'☁ Drive ✓':(lionDrive.getState().status==='error'||lionDrive.getState().status==='needs_auth')?'☁ Drive ⚠':'☁ Drive'}
+        </button>
         <button className="btn-ghost" onClick={()=>{setPickProjectId(null);setShowBank(true);}} style={{fontSize:'.82rem'}}>🖼 Банк</button>
         <button className="btn-ghost" onClick={()=>setShowArchive(true)}
           style={{fontSize:'.82rem',color:archive.length?'rgba(200,160,80,.8)':'rgba(245,230,200,.6)'}}>
@@ -4765,6 +5153,7 @@ function App(){
     </>}
 
     {showToday&&<TodayModal projects={projects} miniProjects={miniProjects} onClose={()=>setShowToday(false)} onToggle={handleToggle} onMiniToggle={handleMiniToggle}/>}
+    {showDrive&&<LionDriveModal onClose={()=>setShowDrive(false)}/>}
     {showToggl&&<TogglModal projects={projects} togglData={togglData} onClose={()=>setShowToggl(false)} onSynced={data=>{setTogglData(data);}}/>}
     {deleteId&&ptd&&<DeleteConfirm name={ptd.name} onConfirm={confirmDelete} onCancel={()=>setDeleteId(null)}/>}
     {editProject&&<EditOverlay project={editProject} onSave={handleSave} onCancel={()=>setEditProject(null)} allProjects={projects}/>}
